@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Pedidos • Rhodes Burgers</title>
+  <link rel="icon" href="images/logo.png" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#625A45" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+   
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{ --primary: #625A45; --primary-dark: #4a4434; --text: #1f2937; --muted: #6b7280; --bg: #f3f4f6; --card: #ffffff; --ring: #e5e7eb; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); --font: 'Inter', sans-serif; --st-accepted: #fbbf24; --st-in_prep: #f97316; --st-ready: #06b6d4; --st-delivered: #22c55e; --st-cancelled: #ef4444; --pay-paid: #15803d; --pay-pending: #ea580c; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font); -webkit-tap-highlight-color: transparent;}
+    #pageLoader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 99999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease, visibility 0.5s; }
+    #pageLoader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    #pageLoader video { width: 250px; max-width: 80%; height: auto; object-fit: contain; mix-blend-mode: screen; }
+    header { position: sticky; top: 0; z-index: 1000; background: #fff; border-bottom: 1px solid var(--ring); }
+    .topbar { max-width: 1200px; margin: 0 auto; height: 60px; padding: 0 12px; display: flex; align-items: center; gap: 6px; overflow: visible; }
+    .brand { font-weight: 800; font-size: 18px; color: var(--primary); display: flex; align-items: center; text-decoration: none; margin-right: 5px; flex-shrink: 0; }
+    .brand img { width: 32px; height: 32px; border-radius: 6px; margin-right: 8px; }
+    .spacer { flex: 1; }
+    .nav-btn { padding: 8px 12px; border-radius: 8px; text-decoration: none; color: #4b5563; font-weight: 600; font-size: 14px; transition: all 0.2s; border: 1px solid transparent; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: transparent; }
+    .nav-btn:hover { background: #f9fafb; }
+    .nav-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 5px rgba(98, 90, 69, 0.3); }
+    .icon-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ring); background: #fff; cursor: pointer; font-size: 16px; flex-shrink: 0; transition: all 0.2s; }
+    .icon-btn:hover { background: #f0f0f0; }
+    .icon-btn.active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+    .icon-btn#btnBell.active { background: #e0f2fe; border-color: #0284c7; color: #0284c7; }
+    .icon-btn#btnAutoPrint.active { background: #dcfce7; border-color: #16a34a; color: #15803d; }
+    .btn-danger { color: #d32f2f; background: #ffebee; border: 1px solid #ffcdd2; }
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content { display: none; position: absolute; background-color: #fff; min-width: 160px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 12px; border: 1px solid var(--ring); z-index: 2000; top: 115%; right: 0; padding: 5px; }
+    .dropdown.show .dropdown-content { display: block; animation: slideDown 0.2s ease; }
+    .dropdown-content a { display: block; padding: 10px; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; border-radius: 8px; }
+    .dropdown-content a:hover { background: #f3f4f6; color: var(--primary); }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .container { max-width: 800px; margin: 20px auto; padding: 0 16px; padding-bottom: 80px; }
+    h1 { font-size: 24px; font-weight: 800; color: #111; margin-bottom: 16px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+    .tab { padding: 8px 16px; border-radius: 99px; background: #fff; border: 1px solid var(--ring); color: #6b7280; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .tab.active { background: #1f2937; color: #fff; border-color: #1f2937; }
+    .order { background: #fff; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; border: 1px solid var(--ring); animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .order-head { padding: 16px; border-bottom: 1px dashed var(--ring); display: flex; justify-content: space-between; align-items: flex-start; }
+    .order-title { font-size: 18px; font-weight: 800; color: #111; line-height: 1.2; }
+    .order-meta { font-size: 13px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .chip { padding: 2px 8px; border-radius: 6px; background: #f3f4f6; font-weight: 600; font-size: 11px; color: #374151; }
+    .chip.mostrador { background: #e0f2fe; color: #0369a1; }
+    .chip.time { background: #fef3c7; color: #92400e; }
+    .chip.pedidosya { background: #fce7f3; color: #be185d; }
+    .chip.rappi { background: #ffedd5; color: #c2410c; }
+    .price-tag { font-size: 20px; font-weight: 900; color: var(--primary); white-space: nowrap; }
+    .items { padding: 16px; background: #fafafa; }
+    .cat-group { margin-bottom: 12px; }
+    .cat-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .it-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start; }
+    .it-qty { background: #fff; border: 1px solid var(--ring); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-weight: 700; font-size: 13px; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0; }
+    .it-det { flex: 1; }
+    .it-name { font-weight: 600; font-size: 15px; color: #374151; line-height: 1.3; }
+    .it-sub { font-size: 13px; color: #6b7280; display: block; margin-top: 2px; }
+    .it-price { font-weight: 700; font-size: 14px; color: var(--primary); margin-left: auto; white-space: nowrap; }
+    .it-note { font-size: 12px; color: #ef4444; font-weight: 600; background: #fef2f2; display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 2px; }
+    .actions-area { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .stateBtns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .state-btn { padding: 10px 4px; border: 1px solid var(--ring); background: #fff; color: #6b7280; border-radius: 10px; font-weight: 600; font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .state-btn:active { transform: scale(0.96); }
+    .state-btn.on.state-accepted { background: var(--st-accepted); color: #000; border-color: var(--st-accepted); box-shadow: 0 4px 10px rgba(251, 191, 36, 0.3); }
+    .state-btn.on.state-in_prep { background: var(--st-in_prep); color: #fff; border-color: var(--st-in_prep); box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3); }
+    .state-btn.on.state-ready { background: var(--st-ready); color: #fff; border-color: var(--st-ready); box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
+    .state-btn.on.state-delivered { background: var(--st-delivered); color: #fff; border-color: var(--st-delivered); box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3); }
+    .state-btn.cancelled { grid-column: span 4; border-color: #fee2e2; color: #ef4444; margin-top: 5px; }
+    .control-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .pay-select, .source-select { padding: 10px; border-radius: 10px; border: 1px solid var(--ring); font-size: 13px; background: #fff; -webkit-appearance: none; font-weight: 600; flex: 1; }
+    .pay-btn { padding: 0 16px; border-radius: 10px; border: none; font-weight: 700; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; justify-content: center; }
+    .pay-btn.pending { background: var(--pay-pending); }
+    .pay-btn.paid { background: var(--pay-paid); }
+    .icon-btn-lg { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--ring); background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+    @media (max-width: 768px) {
+        .brand span { display: none; }
+        .nav-btn { padding: 8px; font-size: 12px; }
+        .nav-btn span { display: none; }
+        .dropdown { position: static; }
+        .order-head { flex-direction: column; gap: 10px; }
+        .price-tag { align-self: flex-end; margin-top: -30px; }
+        .stateBtns { grid-template-columns: 1fr 1fr; }
+        .control-row { flex-wrap: wrap; }
+        .pay-select, .source-select { min-width: 48%; }
+    }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {apiKey:"AIzaSyBbt5YOWDE0ouLn-Ib_iD1yUesok5SEhB8",authDomain:"rhodes-burguers.firebaseapp.com",projectId:"rhodes-burguers",storageBucket:"rhodes-burguers.firebasestorage.app",messagingSenderId:"951646688091",appId:"1:951646688091:web:05db5fadb4150d1fa9c07e"};
+    try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.error("Error Firebase:", e); }
+    const db = firebase.firestore();
+    window.idToDoc = new Map();
+
+    const TTL_MS = 20 * 60 * 60 * 1000;
+    function checkSession(){
+      const ok = localStorage.getItem('rb_admin_ok')==='true';
+      const ts = Number(localStorage.getItem('rb_admin_t')||0);
+      if(!ok || (Date.now()-ts > TTL_MS)) location.replace('login.html');
+      else localStorage.setItem('rb_admin_t', String(Date.now()));
+    }
+    checkSession(); setInterval(checkSession, 5*60*1000);
+
+    // DATOS EN MEMORIA
+    let RECETAS_DB = {}; 
+    let SUB_RECIPES_DB = {}; 
+    let INVENTARIO_DB = {}; 
+    let ID_TO_COLLECTION = {}; 
+    let STOCK_NAME_TO_ID = {}; // Bolsa Global
+    let PRODUCT_CATALOG = {}; 
+    let PRICES_DB = { patty: 2500, cheddar: 300 }; 
+    let ALIASES_DB = []; // 🔥 NUEVO: Para guardar las promos
+
+    function normalize(str) {
+        return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    }
+
+    // CARGAS
+    db.collection('products').onSnapshot(snap => {
+        PRODUCT_CATALOG = {};
+        snap.forEach(doc => { 
+            const d = doc.data();
+            const cat = normalize(d.category);
+            const name = normalize(d.name);
+            PRODUCT_CATALOG[doc.id] = cat;
+            if(name) PRODUCT_CATALOG[name] = cat;
+        });
+        if(window.lastSnap) renderList(window.lastSnap); 
+    });
+
+    db.collection('recipes').onSnapshot(snap => {
+        RECETAS_DB = {};
+        snap.forEach(doc => { RECETAS_DB[doc.id] = doc.data().ingredients; });
+    });
+
+    db.collection('subrecipes').onSnapshot(snap => {
+        snap.forEach(doc => {
+            const d = doc.data();
+            SUB_RECIPES_DB[doc.id] = d;
+            ID_TO_COLLECTION[doc.id] = 'subrecipes'; 
+            if(d.name) STOCK_NAME_TO_ID[normalize(d.name)] = doc.id;
+        });
+    });
+
+    db.collection('inventory').onSnapshot(snap => {
+        snap.forEach(doc => { 
+            const d = doc.data();
+            INVENTARIO_DB[normalize(d.name)] = doc.id; 
+            ID_TO_COLLECTION[doc.id] = 'inventory'; 
+            if(d.name) STOCK_NAME_TO_ID[normalize(d.name)] = doc.id;
+        });
+    });
+    
+    // 🔥 CARGA DE ALIASES (PROMOS) DESDE GERENCIA
+    db.collection('config').doc('gerencia').onSnapshot(doc => {
+        if(doc.exists && doc.data().aliases) {
+            ALIASES_DB = doc.data().aliases;
+        }
+        if(doc.exists && doc.data().config) {
+            // Cargar precios de configuración si fuera necesario
+        }
+    });
+    
+    db.collection('config').doc('prices').onSnapshot(doc => {
+        if(doc.exists) { PRICES_DB = doc.data(); if(window.lastSnap) renderList(window.lastSnap); }
+    });
+
+    // BUSQUEDA INTELIGENTE
+    function findSmartId(keywords) {
+        for (const key of keywords) {
+            const norm = normalize(key);
+            if (STOCK_NAME_TO_ID[norm]) return STOCK_NAME_TO_ID[norm];
+        }
+        const allNormNames = Object.keys(STOCK_NAME_TO_ID);
+        for (const dbName of allNormNames) {
+            for (const key of keywords) {
+                const normKey = normalize(key);
+                if (dbName.includes(normKey) || normKey.includes(dbName)) return STOCK_NAME_TO_ID[dbName];
+            }
+        }
+        return null;
+    }
+
+    // =================================================================
+    // 🔥 GESTIÓN DE STOCK (DEFINITIVA - CON SOPORTE PROMOS/ALIASES)
+    // =================================================================
+    async function gestionarStock(pedido, factor) {
+        if (!pedido.items) return;
+        if(factor === -1 && pedido.stockDescontado) return; 
+        if(factor === 1 && !pedido.stockDescontado) return; 
+
+        const batch = db.batch();
+        let huboCambios = false;
+        let logs = []; 
+
+        // Juntamos todos los items raw del pedido
+        let rawItems = Array.isArray(pedido.items) ? [...pedido.items] : [];
+        if(Array.isArray(pedido.bebidas)) rawItems = rawItems.concat(pedido.bebidas);
+        if(Array.isArray(pedido.drinks)) rawItems = rawItems.concat(pedido.drinks);
+
+        // 🔥 EXPANSIÓN DE PROMOS (ALIASES) 🔥
+        // Transformamos "Promo 2x1" en sus items reales ("2x Hamburguesa", "1x Papas")
+        let itemsCalc = [];
+        
+        rawItems.forEach(item => {
+            const nameNorm = normalize(item.name || "");
+            
+            // Buscamos si este nombre coincide con un ALIAS (Promo)
+            const foundAlias = ALIASES_DB.find(a => normalize(a.external) === nameNorm);
+            
+            if (foundAlias && foundAlias.items && foundAlias.items.length > 0) {
+                logs.push(`✨ Promo Detectada: "${item.name}" -> Desglosando...`);
+                const qtyPromo = Math.ceil(Number(item.qty || 1));
+                
+                foundAlias.items.forEach(subItem => {
+                    itemsCalc.push({
+                        name: subItem.id, // El ID interno del alias suele ser el nombre de la Receta
+                        qty: (Number(subItem.qty) * qtyPromo),
+                        notes: item.notes, // Heredamos notas
+                        fries: item.fries, // Heredamos opciones
+                        extras: item.extras // Heredamos extras
+                    });
+                    logs.push(`   ↳ +${Number(subItem.qty) * qtyPromo} x ${subItem.id}`);
+                });
+            } else {
+                // Si no es promo, pasa directo
+                itemsCalc.push(item);
+            }
+        });
+
+        // AHORA PROCESAMOS LA LISTA EXPANDIDA
+        let totalBurgers = 0;
+        let doritosCount = 0; 
+        let portionsCount = 0; 
+        let saltCount = 0;
+
+        const applyDecrement = (targetID, amount, logName) => {
+            if(!targetID) return false;
+            let collectionName = ID_TO_COLLECTION[targetID] || 'inventory'; 
+            const ref = db.collection(collectionName).doc(targetID);
+            batch.update(ref, { qty: firebase.firestore.FieldValue.increment(amount * factor) });
+            huboCambios = true;
+            logs.push(`   - ${logName || 'Item'}: ${amount} (en ${collectionName})`);
+            return true;
+        };
+
+        itemsCalc.forEach(item => {
+            const rawName = item.name || "Item sin nombre";
+            const nameNorm = normalize(rawName);
+            const notesNorm = normalize(item.notes||"");
+            const fullText = nameNorm + " " + notesNorm; 
+            const qty = Math.ceil(Number(item.qty || 1));
+            const friesOpt = String(item.fries || "").toLowerCase(); 
+
+            logs.push(`📦 Procesando: ${rawName} (x${qty})`);
+
+            // 1. Detectar Burger
+            const isBurger = nameNorm.includes('hamb')||nameNorm.includes('burger')||nameNorm.includes('doble')||nameNorm.includes('simple')||nameNorm.includes('royal')||nameNorm.includes('cheese')||nameNorm.includes('cuarto')||nameNorm.includes('big');
+            
+            if(isBurger) totalBurgers += qty;
+
+            // 2. Porción Papas
+            if(nameNorm.includes("porcion") && (nameNorm.includes("papa") || nameNorm.includes("frita"))) {
+                portionsCount += qty;
+            }
+
+            // 3. Sazonador
+            const hasSazon = friesOpt.includes('sazon') || nameNorm.includes("dorito") || nameNorm.includes("sazon") || notesNorm.includes("sazon");
+            if (hasSazon) doritosCount += qty;
+
+            // 4. Sal
+            const hasNoSalt = friesOpt.includes('sin') && (friesOpt.includes('sal') || friesOpt.includes('sodio')) || nameNorm.includes("sin sal") || notesNorm.includes("sin sal");
+            const isPotatoItem = isBurger || nameNorm.includes("papa") || nameNorm.includes("frita") || nameNorm.includes("bastones");
+            if (isPotatoItem && !hasNoSalt && !hasSazon) saltCount += qty;
+
+            // 5. RECETA AUTOMÁTICA
+            let recipeName = Object.keys(RECETAS_DB).find(k => normalize(k) === nameNorm);
+            if (!recipeName) recipeName = Object.keys(RECETAS_DB).find(k => nameNorm.includes(normalize(k)));
+
+            let recipeFound = false;
+
+            if (recipeName) {
+                const ingredientes = RECETAS_DB[recipeName];
+                logs.push(`   ✅ Receta encontrada: "${recipeName}"`);
+                recipeFound = true;
+                ingredientes.forEach(ing => {
+                    let targetID = ing.id;
+                    let targetQty = Number(ing.qty);
+                    if (!targetID && ing.ingrediente) {
+                        targetID = findSmartId([ing.ingrediente]);
+                        targetQty = Number(ing.cantidad);
+                    }
+                    if (targetID) applyDecrement(targetID, targetQty * qty, "Item Receta");
+                });
+            } 
+            
+            // 6. FALLBACK CARNE (Si no hay receta y es burger)
+            if (!recipeFound && isBurger) {
+                let patties = 1;
+                if(nameNorm.includes('doble')) patties = 2;
+                if(nameNorm.includes('triple')) patties = 3;
+                if(nameNorm.includes('cuadruple')) patties = 4;
+
+                const pattyId = findSmartId(['medallon', 'carne', 'patty']);
+                if(pattyId) applyDecrement(pattyId, patties * qty, `Auto-Medallones (${patties})`);
+            }
+
+            // 7. 🔥 EXTRAS DETECTADOS EN TEXTO
+            // CARNE / MEDALLÓN
+            if (fullText.includes('extra') || fullText.includes('adicional') || !isBurger) { 
+                if (fullText.includes('carne') || fullText.includes('medallon') || fullText.includes('patty')) {
+                     if (fullText.includes('extra') || fullText.includes('adicional') || !isBurger) {
+                        const id = findSmartId(['medallon', 'carne', 'patty']);
+                        if(id) applyDecrement(id, 1 * qty, "Extra Medallón/Carne");
+                     }
+                }
+            }
+
+            // CHEDDAR
+            if (fullText.includes('extra cheddar') || fullText.includes('adicional cheddar') || fullText.includes('cheddar extra')) {
+                const id = findSmartId(['cheddar', 'queso']);
+                if(id) applyDecrement(id, 1 * qty, "Extra Cheddar");
+            }
+
+            // PANCETA / BACON
+            if (fullText.includes('extra bacon') || fullText.includes('panceta') || fullText.includes('tocino')) {
+                const id = findSmartId(['bacon', 'panceta']);
+                if(id) applyDecrement(id, 0.03 * qty, "Extra Bacon"); 
+            }
+
+            // 8. EXTRAS DEL OBJETO
+            if(item.extras){
+                for (const [key, valRaw] of Object.entries(item.extras)) {
+                    const val = Number(valRaw);
+                    if (val > 0) {
+                        let searchKeys = [key];
+                        if(key==='patty') searchKeys = ['medallon', 'carne', 'patty'];
+                        if(key==='bacon') searchKeys = ['panceta', 'bacon', 'tocino'];
+                        if(key==='cheddar') searchKeys = ['cheddar', 'queso'];
+
+                        const ingID = findSmartId(searchKeys);
+                        if(ingID) applyDecrement(ingID, (key==='bacon' ? 0.03 : 1) * val, `Extra Estructurado (${key})`);
+                    }
+                }
+            }
+        });
+
+        // --- AUTOMÁTICOS GLOBALES ---
+        const autoDesc = (keys, qtyToDeduct, name) => {
+            const id = findSmartId(keys);
+            if(id) applyDecrement(id, qtyToDeduct, name);
+        };
+
+        if(totalBurgers > 0) {
+            autoDesc(['papas fritas', 'papa frita', 'papas', 'papa', 'bastones', 'congelada', 'fritas'], totalBurgers * 200, "Papas (200g)"); 
+            autoDesc(['carton', 'caja papa', 'caja', 'cajita'], Math.ceil(totalBurgers), "Cartón Papa"); 
+            autoDesc(['parafinado', 'papel'], Math.ceil(totalBurgers), "Papel"); 
+            const bolsas = Math.ceil(totalBurgers / 2);
+            autoDesc(['bolsa', 'packaging', 'kraft'], bolsas, "Bolsas");
+            autoDesc(['ganchito', 'grampa', 'broche'], bolsas * 3, "Ganchitos");
+            const unidadesImp = totalBurgers + bolsas;
+            autoDesc(['tinta', 'sello'], unidadesImp * 0.25, "Tinta");
+        }
+
+        if(portionsCount > 0) autoDesc(['papas fritas', 'papa frita', 'papas', 'papa', 'bastones'], portionsCount * 350, "Papas Porción (350g)");
+        if(saltCount > 0) autoDesc(['sal', 'sal fina', 'sodio'], saltCount * 2, `Sal (${saltCount*2}g)`);
+        if(doritosCount > 0) autoDesc(['sazonador doritos', 'doritos', 'dorito', 'sazonador'], doritosCount * 5, `Sazonador Doritos (${doritosCount*5}g)`);
+
+        if (huboCambios) {
+            const pedidoRef = db.collection('orders').doc(pedido.id);
+            batch.update(pedidoRef, { stockDescontado: (factor === -1) });
+            await batch.commit();
+            alert("✅ STOCK ACTUALIZADO (Con Promos)\n\n" + logs.join("\n"));
+        } else {
+            alert("⚠️ NO SE DESCONTÓ NADA\n\nLog:\n" + logs.join("\n"));
+        }
+    }
+
+    // GLOBALES
+    window.logout = () => { localStorage.removeItem('rb_admin_ok'); location.replace('login.html'); };
+
+    window.setOrderStatus = async (id, next, isPaid) => {
+        if(next==='delivered' && !isPaid){ alert("⚠️ COBRAR PRIMERO: El pedido figura pendiente."); return; }
+        try{ 
+            const docSnap = await db.collection('orders').doc(id).get();
+            if(!docSnap.exists) return;
+            const pedidoData = { id: docSnap.id, ...docSnap.data() };
+
+            if(next === 'delivered'){ await gestionarStock(pedidoData, -1); } 
+            else if(next === 'cancelled'){ await gestionarStock(pedidoData, 1); }
+
+            await db.collection("orders").doc(id).update({status:next}); 
+        }catch(e){
+            console.error(e);
+            alert("Error al actualizar estado: " + e.message);
+        }
+    };
+
+    window.deleteOrder = async (id) => {
+        if(!confirm("⚠️ ¿Estás seguro de eliminar este pedido permanentemente?\n\nEsta acción borrará el pedido de la base de datos y no se puede deshacer.")) return;
+        try {
+            await db.collection("orders").doc(id).delete();
+        } catch(e) {
+            console.error(e);
+            alert("Error al eliminar: " + e.message);
+        }
+    };
+
+    window.setPaymentStatus = async (id, currentPaid, currentMethod) => {
+        if(!currentPaid && (!currentMethod || currentMethod === "")){ 
+            alert("⚠️ Seleccioná un MÉTODO DE PAGO primero."); return; 
+        }
+        try{ await db.collection("orders").doc(id).update({ paid: !currentPaid, payment_status: !currentPaid ? 'paid' : 'pending_payment' }); }catch(e){}
+    };
+    
+    window.updatePago = async (id, val) => { 
+        try { 
+            const updateData = { pago: val };
+            if (val && val !== "") {
+                updateData.paid = true;
+                updateData.payment_status = 'paid';
+            }
+            await db.collection("orders").doc(id).update(updateData); 
+        } catch(e) { console.error(e); } 
+    };
+
+    window.updateSource = async (id, val) => { 
+        try { await db.collection("orders").doc(id).update({ source: val }); } catch(e) {} 
+    };
+
+    window.printOrder = (id) => { const doc = window.idToDoc.get(id); if(doc) window.trySilentPrint(doc); };
+    
+    window.pickDate = (o) => { 
+        if(!o) return new Date();
+        if(o.createdAt?.toDate) return o.createdAt.toDate(); 
+        if(typeof o.createdAt==='string') return new Date(o.createdAt); 
+        return new Date(); 
+    };
+    
+    window.cleanFries = (raw) => { if(!raw) return ""; const s = String(raw).toLowerCase().replace(/[_-]/g,' ').trim(); if(s.includes('sazon')) return "Sazonadas"; if(s.includes('sin sal')) return "Sin sal"; if(s.includes('con sal')||s.includes('sal')) return "Con Sal"; return s.charAt(0).toUpperCase() + s.slice(1); };
+    
+    // CATEGORIZACIÓN
+    window.getCat = (item) => {
+        const n = String(item.name || "").trim().toLowerCase();
+        const t = String(item.type || "").toLowerCase();
+        const id = item.id;
+
+        if (t === 'drink' || t === 'bebida') return 'd';
+        if (t === 'side' || t === 'guarnicion' || t === 'papa') return 'f';
+        if (t === 'burger' || t === 'hamburguesa') return 'b';
+
+        let catDB = PRODUCT_CATALOG[id] || PRODUCT_CATALOG[n];
+        if (catDB) {
+            catDB = String(catDB).toLowerCase().trim();
+            if (catDB.includes('bebida') || catDB.includes('drink')) return 'd';
+            if (catDB.includes('guarnicion') || catDB.includes('papa') || catDB.includes('side')) return 'f';
+            if (catDB.includes('hamburguesa') || catDB.includes('burger')) return 'b';
+        }
+        
+        if (item.category) {
+            const catItem = String(item.category).toLowerCase();
+            if (catItem.includes('bebida')) return 'd';
+            if (catItem.includes('guarnicion')) return 'f';
+        }
+
+        const drinks = [
+            'coca', 'agua', 'cerveza', 'andes', 'aquarius', 'pepsi', '7up', 
+            'heineken', 'corona', 'patagonia', 'brahma', 'quilmes', 'stella', 
+            'imperial', 'sprite', 'levite', 'paso de los toros', 'vino', 'fanta', 
+            'gaseosa', 'lata', 'botella', 'ml', '1.5', 'schweppes', 'mirinda', 
+            'jugo', 'baggio', 'monster', 'speed', 'red bull', 'energizante', 
+            'manaos', 'secuko', 'limonada', 'exprimido'
+        ];
+        if (drinks.some(k => n.includes(k))) return 'd';
+
+        if (n.includes('papas') || n.includes('fritas') || n.includes('aros') || n.includes('nugget')) return 'f';
+
+        return 'b'; 
+    };
+
+    function consolidateItems(list) {
+        const map = new Map();
+        list.forEach(it => {
+            let exKey = "";
+            if(it.extras) {
+                 const keys = Object.keys(it.extras).sort();
+                 exKey = keys.map(k => `${k}:${it.extras[k]}`).join("-");
+            }
+            const noteKey = String(it.notes || "").trim().toLowerCase();
+            const nameKey = String(it.name || "").trim();
+            const key = `${nameKey}_${exKey}_${noteKey}`;
+            
+            if(map.has(key)){
+                map.get(key).qty += (Number(it.qty)||1);
+            } else {
+                map.set(key, { ...it, qty: (Number(it.qty)||1) });
+            }
+        });
+        return Array.from(map.values());
+    }
+
+    function getCleanTime(o, defaultTime) {
+        if (o.pickup_slot && typeof o.pickup_slot === 'string' && o.pickup_slot.includes(':')) return o.pickup_slot;
+        let raw = o.pickup_time_pretty || o.pickup_time;
+        if (raw && typeof raw === 'string') {
+            if (raw.includes('_')) {
+                const parts = raw.split('_'); const timePart = parts[parts.length - 1]; 
+                if (timePart.length === 4 && !isNaN(timePart)) return timePart.substring(0, 2) + ':' + timePart.substring(2, 4);
+            }
+            if (raw.includes(':') && raw.length <= 5) return raw;
+        }
+        return defaultTime;
+    }
+
+    /* ============================================================
+       🔥 IMPORTACIÓN PEDIDOS YA (CORREGIDA: DETECCIÓN FLEXIBLE + BLINDAJE EXTRAS)
+    ============================================================ */
+    async function importarPedidosYa() {
+        const input = document.getElementById('excelInput');
+        if (!input.files.length) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = async function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, {range: 1, defval:""});
+
+            let imported = 0;
+            let skipped = 0;
+            const loader = document.getElementById('pageLoader');
+            if(loader) loader.classList.remove("hidden");
+
+            for (const row of rows) {
+                const r = {};
+                Object.keys(row).forEach(k => r[k.toLowerCase().trim()] = row[k]);
+
+                const id = r['nro de pedido']; 
+                if (!id) continue;
+
+                const existing = await db.collection('orders').where('py_id', '==', String(id)).get();
+                if (!existing.empty) { skipped++; continue; }
+
+                let total = r['total del pedido'];    
+                let neto = r['ingreso estimado'];      
+                if(typeof total !== 'number') total = Number(String(total).replace(/\./g, '').replace(',', '.'));
+                if(typeof neto !== 'number') neto = Number(String(neto).replace(/\./g, '').replace(',', '.'));
+                if (!total || total <= 0) continue;
+
+                const dateStr = r['fecha del pedido'];
+                let clientName = r['nombre del cliente'] || "Cliente Py";
+                
+                const statusStr = r['estado del pedido'] || "";
+                let status = 'delivered'; 
+                let isCancelled = false;
+                if (statusStr.toLowerCase().includes('cancelado') || statusStr.toLowerCase().includes('rechazado')) {
+                    status = 'cancelled'; isCancelled = true;
+                }
+
+                const itemsStr = r['artículos'] || "";
+                let itemsList = [];
+
+                if(itemsStr) {
+                    let rawItems = String(itemsStr).split(/,|\n|\+/); 
+                    
+                    rawItems.forEach(line => {
+                        line = line.trim();
+                        if(!line) return;
+                        let qty = 1;
+                        let name = line;
+                        const match = line.match(/^(\d+)\s*[xX]?\s*(.*)$/);
+                        if(match) { qty = Number(match[1]); name = match[2]; }
+                        
+                        let note = "";
+                        if(name.includes('[')) {
+                            const nMatch = name.match(/\[(.*?)\]/);
+                            if(nMatch) { note = nMatch[1]; name = name.replace(/\[.*?\]/, "").trim(); }
+                        }
+
+                        const nameClean = normalize(name); 
+                        
+                        // 🔥 LÓGICA BLINDADA DE EXTRAS 🔥
+                        const explicitExtra = nameClean.includes('extra') || nameClean.includes('adicional');
+                        const isIngredientName = (nameClean === 'medallon' || nameClean === 'panceta' || nameClean === 'bacon' || nameClean === 'cheddar');
+
+                        const isExtraCarne = (explicitExtra && (nameClean.includes('carne') || nameClean.includes('medallon') || nameClean.includes('patty'))) || (nameClean.includes('medallon') && !nameClean.includes('hamb'));
+                        const isExtraCheddar = (explicitExtra && (nameClean.includes('cheddar') || nameClean.includes('queso'))) || nameClean === 'cheddar';
+                        const isExtraBacon = (explicitExtra && (nameClean.includes('bacon') || nameClean.includes('panceta'))) || nameClean === 'bacon' || nameClean === 'panceta';
+
+                        if ((isExtraCarne || isExtraCheddar || isExtraBacon) && itemsList.length > 0) {
+                            let lastItem = itemsList[itemsList.length - 1];
+                            if(!lastItem.extras) lastItem.extras = {};
+
+                            if(isExtraCarne) lastItem.extras.patty = (lastItem.extras.patty || 0) + qty;
+                            if(isExtraCheddar) lastItem.extras.cheddar = (lastItem.extras.cheddar || 0) + qty;
+                            if(isExtraBacon) lastItem.extras.bacon = (lastItem.extras.bacon || 0) + qty;
+                            return; 
+                        }
+
+                        const catCode = window.getCat({name: name});
+                        let type = 'other';
+                        if(catCode === 'b') type='burger';
+                        else if(catCode === 'f') type='side';
+                        else if(catCode === 'd') type='drink';
+
+                        itemsList.push({ qty, name, price: 0, type, notes: note, extras: {} });
+                    });
+                } else {
+                    itemsList = [{ name: 'Pedido Importado', qty: 1, price: total }];
+                }
+                if(itemsList.length === 1) itemsList[0].price = total;
+
+                let isoDate = new Date().toISOString();
+                if(dateStr) {
+                    if(typeof dateStr === 'number') {
+                        const excelEpoch = new Date(1899, 11, 30);
+                        isoDate = new Date(excelEpoch.getTime() + dateStr * 86400000).toISOString();
+                    } else { try { isoDate = new Date(dateStr).toISOString(); } catch(e){} }
+                }
+
+                try {
+                    const orderRef = await db.collection('orders').add({
+                        orderNumber: String(id), py_id: String(id), source: 'pedidosya',
+                        status: status, payment_status: 'paid', paid: true, pago: 'pedidosya_online',
+                        entrega: 'delivery', nombre: clientName, total: total, neto_excel: neto,      
+                        createdAt: isoDate, items: itemsList, stockDescontado: false 
+                    });
+
+                    if (!isCancelled) {
+                        const pedidoParaStock = { id: orderRef.id, items: itemsList, stockDescontado: false };
+                        await gestionarStock(pedidoParaStock, -1);
+                    }
+                    imported++;
+                } catch (err) { console.error("Error importando:", err); }
+            }
+
+            if(loader) loader.classList.add("hidden");
+            alert(`✅ IMPORTACIÓN FINALIZADA\n\nSe cargaron ${imported} pedidos correctamente.`);
+            input.value = ""; 
+            location.reload();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+  </script>
+</head>
+
+<body>
+  <div id="pageLoader">
+    <video autoplay loop muted playsinline>
+      <source src="images/loader.mp4" type="video/mp4">
+      <img src="images/logo.png" alt="Cargando..." style="width:100px;">
+    </video>
+  </div>
+
+  <input type="file" id="excelInput" style="display:none" accept=".xlsx, .xls, .csv" onchange="importarPedidosYa()">
+
+  <header>
+    <div class="topbar">
+      <a class="brand" href="#"><img src="images/logo.png" alt=""><span>Pedidos</span></a>
+      <div class="spacer"></div>
+      
+      <button onclick="document.getElementById('excelInput').click()" class="nav-btn" style="background:#f97316; color:white; border:none; margin-right:8px;">
+        📥 Importar Excel
+      </button>
+
+      <a href="pedido_local.html" class="nav-btn active">📦 Pedidos</a>
+      <a href="finanzas.html" class="nav-btn">📈 Finanzas</a>
+      <div class="dropdown">
+            <button onclick="document.querySelector('.dropdown').classList.toggle('show')" class="nav-btn">📋 Stock ▾</button>
+            <div class="dropdown-content">
+                <a href="stock.html">📦 Stock</a>
+                <a href="ingresos.html">📥 Ingresos</a>
+            </div>
+      </div>
+      <a href="mostrador.html" class="nav-btn">🧾 Mostrador</a>
+      <a href="admin.html" class="nav-btn">⚙️ Admin</a>
+      <button id="btnBell" class="icon-btn" title="Sonido">🔔</button>
+      <button id="btnAutoPrint" class="icon-btn" title="Autoimprimir">🖨️</button>
+      <button onclick="window.logout()" class="nav-btn btn-danger">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Últimos pedidos</h1>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-f="recibidos">Cocina / Recibidos</button>
+      <button class="tab" data-f="entregados">Entregados</button>
+      <button class="tab" data-f="cancelled">Cancelados</button>
+      <button class="tab" data-f="all">Todos</button>
+    </div>
+    <div id="orders"><div class="empty-state">Cargando...</div></div>
+  </main>
+
+ <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // AUDIO
+    let audioCtx = null;
+    const initAudio = () => {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    };
+    document.body.addEventListener('click', initAudio, { once: true });
+    document.body.addEventListener('touchstart', initAudio, { once: true });
+
+    const playBeep = () => {
+        let soundOn = JSON.parse(localStorage.getItem("rb_sound")||"true");
+        if(!soundOn) return;
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const createBeep = (startTime) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square'; osc.frequency.setValueAtTime(1000, startTime); 
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            gain.gain.setValueAtTime(0.5, startTime); 
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+            osc.stop(startTime + 0.15);
+        };
+        createBeep(now); createBeep(now + 0.25); createBeep(now + 0.50); createBeep(now + 0.75);
+    };
+
+    // INTERFAZ
+    const money = n => (Number(n)||0).toLocaleString("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+    let currentFilter = "recibidos"; let lastSnap = null;
+    
+    document.getElementById("tabs").addEventListener("click", (e)=>{
+        const btn = e.target.closest(".tab"); if(!btn) return;
+        document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.f;
+        if(window.lastSnap) renderList(window.lastSnap);
+    });
+
+    const btnBell = document.getElementById("btnBell");
+    let soundOn = JSON.parse(localStorage.getItem("rb_sound")||"true");
+    const updBell = ()=>{ btnBell.classList.toggle("active", soundOn); btnBell.innerText = soundOn ? '🔔' : '🔕'; }; 
+    updBell();
+    btnBell.onclick = ()=>{ initAudio(); soundOn = !soundOn; localStorage.setItem("rb_sound", soundOn); updBell(); if(soundOn) playBeep(); };
+
+    const btnAP = document.getElementById("btnAutoPrint");
+    let autoP = JSON.parse(localStorage.getItem("rb_autop")||"false");
+    const updAP = ()=>{ btnAP.classList.toggle("active", autoP); }; 
+    updAP();
+    btnAP.onclick = ()=>{ autoP = !autoP; localStorage.setItem("rb_autop", autoP); updAP(); };
+
+    // FIREBASE
+    let isInit=true; setTimeout(()=>isInit=false, 3000);
+    db.collection("orders").orderBy("orderNumber", "desc").limit(300).onSnapshot(snap => {
+        window.lastSnap = snap;
+        renderList(snap);
+        const loader = document.getElementById('pageLoader');
+        if(loader) loader.classList.add("hidden");
+
+        snap.docChanges().forEach(ch => {
+            if(ch.type === 'added' && !isInit){
+                const data = ch.doc.data();
+                const fechaPedido = window.pickDate(data);
+                const ahora = new Date();
+                const diferenciaMinutos = (ahora - fechaPedido) / 1000 / 60; 
+                if(diferenciaMinutos < 20) {
+                    if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); 
+                    playBeep(); 
+                    if(autoP) window.trySilentPrint(window.idToDoc.get(ch.doc.id));
+                }
+            }
+        });
+    }, err => {
+        document.getElementById("orders").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
+        const loader = document.getElementById('pageLoader');
+        if(loader) loader.classList.add("hidden");
+    });
+
+    function renderList(snap){
+        let docs = snap.docs.map(d => ({ data: d.data(), id: d.id, ref: d }));
+        window.idToDoc = new Map(snap.docs.map(d=>[d.id,d]));
+        docs.sort((a,b) => window.pickDate(b.data) - window.pickDate(a.data));
+
+        const filtered = docs.filter(o => {
+            const s = o.data.status || 'accepted';
+            if(currentFilter === 'recibidos') return ['accepted','in_prep','ready','pending_payment'].includes(s);
+            if(currentFilter === 'entregados') return s === 'delivered';
+            if(currentFilter === 'cancelled') return s === 'cancelled';
+            return true;
+        });
+
+        const cont = document.getElementById("orders");
+        if(filtered.length===0){ cont.innerHTML = '<div class="empty-state">No hay pedidos.</div>'; return; }
+        cont.innerHTML = filtered.map(x => buildOrderHTML(x.ref)).join("");
+    }
+
+    function buildOrderHTML(doc){
+        const o = doc.data();
+        const dt = window.pickDate(o);
+        const dateStr = dt.toLocaleDateString("es-AR", {day:'2-digit', month:'2-digit'}); 
+        const timeStr = dt.toLocaleTimeString("es-AR", {hour:'2-digit', minute:'2-digit'});
+        const st = o.status || 'accepted';
+        const isPaid = (o.payment_status==='paid') || !!o.paid;
+        
+        const displayTime = getCleanTime(o, ""); 
+        
+        const LABELS = {accepted:'Recibido', in_prep:'Cocina', ready:'Listo', delivered:'Entregado'};
+        const btns = ['accepted','in_prep','ready','delivered'].map(k => {
+            const isOn = (k === st) ? 'on' : '';
+            const opacity = (k==='delivered' && !isPaid) ? 'opacity:0.5' : '';
+            return `<div class="state-btn ${isOn} state-${k}" style="${opacity}" onclick="setOrderStatus('${doc.id}', '${k}', ${isPaid})"><span>${LABELS[k]}</span></div>`;
+        }).join('');
+
+        let payVal = o.pago;
+        if(payVal === 'mostrador_sin_especificar') payVal = "";
+        let srcVal = o.source || 'web'; 
+
+        let items = Array.isArray(o.items) ? [...o.items] : [];
+        if(Array.isArray(o.bebidas)) items = items.concat(o.bebidas);
+        if(Array.isArray(o.drinks)) items = items.concat(o.drinks);
+
+        let cats = { b:[], f:[], d:[], o:[] };
+        items.forEach(it => {
+            const cat = window.getCat(it);
+            if(cat === 'b'){
+                cats.b.push(it);
+                let fName = it.fries;
+                if(!fName && it.extras?.fries) fName = it.extras.fries;
+                if(!fName && it.guarnicion) fName = it.guarnicion;
+                if(fName){
+                   const fClean = String(fName).toLowerCase();
+                   if(fClean !== 'sin_papas' && fClean !== 'ninguna') {
+                       cats.f.push({name: fName, qty: it.qty||1});
+                   }
+                }
+                let dName = it.bebida || it.drink; 
+                if(!dName && it.extras?.bebida) dName = it.extras.bebida;
+                if(!dName && it.extras?.drink) dName = it.extras.drink;
+                if(!dName && it.extras?.gaseosa) dName = it.extras.gaseosa;
+                if(dName) {
+                    const dClean = String(dName).toLowerCase();
+                    if(dClean !== 'sin_bebida' && dClean !== 'ninguna' && dClean !== '') {
+                        cats.d.push({name: dName, qty: it.qty||1});
+                    }
+                }
+            } else { cats[cat].push(it); }
+        });
+
+        cats.b = consolidateItems(cats.b);
+        cats.f = consolidateItems(cats.f);
+        cats.d = consolidateItems(cats.d);
+        cats.o = consolidateItems(cats.o);
+
+        const renderSec = (list, icon, title) => {
+            if(!list.length) return "";
+            const rows = list.map(it => {
+                let ex = [];
+                let basePrice = Number(it.price) || 0;
+                let extraPatty = (it.extras?.patty || 0) * (PRICES_DB.patty || 2500);
+                let extraCheddar = (it.extras?.cheddar || 0) * (PRICES_DB.cheddar || 300);
+                let unitFinal = basePrice + extraPatty + extraCheddar;
+                let lineTotal = unitFinal * (it.qty || 1);
+
+                if(it.extras?.patty) ex.push(`+${it.extras.patty} carne`);
+                if(it.extras?.cheddar) ex.push(`+${it.extras.cheddar} cheddar`);
+                
+                let dName = esc(it.name);
+                if(title.includes("PAPAS")) dName = window.cleanFries(it.name);
+
+                const extrasHtml = ex.map(e => `<div class="it-sub" style="color:#d97706; font-weight:600">• ${e}</div>`).join('');
+                let displayPrice = money(lineTotal);
+                if(title.includes("PAPAS")) displayPrice = "";
+                
+                return `<div class="it-row">
+                    <div class="it-qty">${it.qty||1}</div>
+                    <div class="it-det">
+                      <div class="it-name">${dName}</div>
+                      ${extrasHtml}
+                      ${it.notes ? `<div class="it-note">${esc(it.notes)}</div>` : ''}
+                    </div>
+                    <div class="it-price">${displayPrice}</div>
+                </div>`;
+            }).join("");
+            return `<div class="cat-group"><div class="cat-title">${icon} ${title}</div>${rows}</div>`;
+        };
+
+        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const itemsHTML = renderSec(cats.b,'🍔','HAMBURGUESAS') + renderSec(cats.f,'🍟','PAPAS') + renderSec(cats.d,'🥤','BEBIDAS') + renderSec(cats.o,'🔸','OTROS');
+        const total = o.total || items.reduce((a,i)=>a+((i.price||0)*(i.qty||1)),0);
+
+        let discountHTML = "";
+        if (o.discount > 0) {
+            discountHTML = `<div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:700;padding:0 16px;margin-bottom:8px">
+                <span>🏷️ Descuento (${esc(o.coupon||'')}):</span>
+                <span>-${money(o.discount)}</span>
+            </div>`;
+        }
+
+        let netHtml = "";
+        if(o.neto_excel && o.neto_excel > 0) {
+            netHtml = `<div style="font-size:12px; color:#15803d; text-align:right; font-weight:700;">Neto: ${money(o.neto_excel)}</div>`;
+        }
+
+        const telHtml = o.telefono ? `<div style="margin-top:4px; font-size:13px; font-weight:600; color:#4b5563;">📞 <a href="https://wa.me/${o.telefono.replace(/\D/g,'')}" target="_blank" style="text-decoration:none; color:inherit;">${esc(o.telefono)}</a></div>` : '';
+
+        return `
+        <div class="order ${st==='cancelled'?'cancelled':''}">
+           <div class="order-head">
+              <div>
+                 <div class="order-title">#${o.orderNumber||'--'} — ${o.source==='mostrador'?esc(o.nombre)+' (Local)':esc(o.nombre)}</div>
+                 ${telHtml}
+                 <div class="order-meta">
+                    <span>${dateStr} ${timeStr}</span> 
+                    <span class="chip ${srcVal}">${esc(srcVal)}</span> ${displayTime ? `<span class="chip time">⏰ ${esc(displayTime)}</span>` : ''}
+                 </div>
+              </div>
+              <div style="text-align:right">
+                  <div class="price-tag">${money(total)}</div>
+                  ${netHtml}
+              </div>
+           </div>
+           
+           <div class="items">${itemsHTML || '<div class="it-sub">Sin ítems</div>'}</div>
+           ${discountHTML}
+
+           <div class="actions-area">
+              <div class="control-row">
+                 <select class="pay-select" onchange="updatePago('${doc.id}', this.value)">
+                    <option value="" ${!payVal?'selected':''}>Pago...</option>
+                    <option value="efectivo" ${payVal==='efectivo'?'selected':''}>Efectivo</option>
+                    <option value="mercado_pago" ${payVal==='mercado_pago'?'selected':''}>QR (MP)</option>
+                    <option value="debito" ${payVal==='debito'?'selected':''}>Débito</option>
+                    <option value="transferencia" ${payVal==='transferencia'?'selected':''}>Transferencia</option>
+                 </select>
+
+                 <select class="source-select" onchange="updateSource('${doc.id}', this.value)">
+                    <option value="web" ${srcVal==='web'?'selected':''}>Web</option>
+                    <option value="mostrador" ${srcVal==='mostrador'?'selected':''}>Local</option>
+                    <option value="pedidosya" ${srcVal==='pedidosya'?'selected':''}>PedidosYa</option>
+                    <option value="rappi" ${srcVal==='rappi'?'selected':''}>Rappi</option>
+                 </select>
+              </div>
+
+              <div class="control-row">
+                 <button class="pay-btn ${isPaid?'paid':'pending'}" onclick="setPaymentStatus('${doc.id}', ${isPaid}, '${payVal}')">
+                    ${isPaid ? 'PAGADO' : 'COBRAR'}
+                 </button>
+                 <div class="icon-btn-lg" onclick="printOrder('${doc.id}')">🖨️</div>
+                 <div class="icon-btn-lg" style="color:#d32f2f; border-color:#ffcdd2; background:#ffebee;" onclick="deleteOrder('${doc.id}')">🗑️</div>
+              </div>
+
+              <div class="stateBtns">
+                 ${btns}
+                 <div class="state-btn cancelled" onclick="setOrderStatus('${doc.id}', 'cancelled', ${isPaid})">CANCELAR</div>
+              </div>
+           </div>
+        </div>`;
+    }
+
+    // --- IMPRESIÓN ---
+    window.trySilentPrint = function(docSnap){
+       const o = docSnap.data();
+       const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');
+       const m = n => (Number(n)||0).toLocaleString("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+       
+       const dt = window.pickDate(o);
+       const dateStr = dt.toLocaleDateString("es-AR");
+       const timeStr = dt.toLocaleTimeString("es-AR",{hour12:false});
+
+       const horarioRetiro = getCleanTime(o, timeStr.substring(0, 5));
+
+       let payTxt = o.pago;
+       if(!payTxt || payTxt==='mostrador_sin_especificar' || payTxt==="") payTxt="A COBRAR EN CAJA";
+       else if(payTxt==='mercado_pago') payTxt="QR (MP)";
+       else payTxt = payTxt.toUpperCase();
+
+       const isPaid = (o.payment_status === 'paid') || o.paid;
+       const stPay = isPaid ? "PAGADO" : "PENDIENTE";
+       
+       let items = Array.isArray(o.items) ? [...o.items] : [];
+       if(Array.isArray(o.bebidas)) items = items.concat(o.bebidas);
+       if(Array.isArray(o.drinks)) items = items.concat(o.drinks);
+
+       let cats = { b:[], f:[], d:[], o:[] };
+       items.forEach(it => {
+          const cat = window.getCat(it);
+          if(cat==='b'){
+             cats.b.push(it);
+             let fName = it.fries;
+             if(!fName && it.extras?.fries) fName = it.extras.fries;
+             if(!fName && it.guarnicion) fName = it.guarnicion;
+             if(fName){
+                 const fClean = String(fName).toLowerCase();
+                 if(fClean !== 'sin_papas' && fClean !== 'ninguna') {
+                    cats.f.push({name: fName, qty: it.qty||1});
+                 }
+             }
+             let dName = it.bebida || it.drink; 
+             if(!dName && it.extras?.bebida) dName = it.extras.bebida;
+             if(!dName && it.extras?.drink) dName = it.extras.drink;
+             if(!dName && it.extras?.gaseosa) dName = it.extras.gaseosa;
+             if(dName) {
+                 const dClean = String(dName).toLowerCase();
+                 if(dClean !== 'sin_bebida' && dClean !== 'ninguna' && dClean !== '') {
+                      cats.d.push({name: dName, qty: it.qty||1});
+                 }
+             }
+          } else { cats[cat].push(it); }
+       });
+
+       cats.b = consolidateItems(cats.b);
+       cats.f = consolidateItems(cats.f);
+       cats.d = consolidateItems(cats.d);
+       cats.o = consolidateItems(cats.o);
+       
+       const rSec = (l, ti) => {
+         if(!l.length) return "";
+         const r = l.map(i => {
+            let dName = esc(i.name);
+            if(ti.includes("PAPA")) dName = window.cleanFries(i.name);
+            
+            let basePrice = Number(i.price) || 0;
+            let extraPatty = (i.extras?.patty || 0) * (PRICES_DB.patty || 2500);
+            let extraCheddar = (i.extras?.cheddar || 0) * (PRICES_DB.cheddar || 300);
+            let unitFinal = basePrice + extraPatty + extraCheddar;
+            let lineTotal = unitFinal * (i.qty || 1);
+
+            let displayPrice = m(lineTotal);
+            if(ti.includes("PAPA")) displayPrice = "";
+            
+            let h = `<div class="row name"><div class="l">${i.qty||1} × ${dName}</div><div class="r">${displayPrice}</div></div>`;
+            
+            if(!ti.includes("PAPA")){
+               if(i.extras?.patty) h+=`<div class="sub">• +${i.extras.patty} carne</div>`;
+               if(i.extras?.cheddar) h+=`<div class="sub">• +${i.extras.cheddar} cheddar</div>`;
+            }
+            if(i.notes) h+=`<div class="sub">📝 ${esc(i.notes)}</div>`;
+            h+=`<div class="sep"></div>`;
+            return h;
+         }).join("");
+         return `<div class="blk"><div class="lbl" style="border-bottom:1px solid #000;display:inline-block;margin-top:6px">${ti}</div></div>${r}`;
+       };
+
+       const body = rSec(cats.b,'HAMBURGUESAS') + rSec(cats.f,'PAPAS') + rSec(cats.d,'BEBIDAS') + rSec(cats.o,'OTROS');
+       const total = o.total || items.reduce((a,i)=>a+((i.price||0)*(i.qty||1)),0);
+       const name = o.source==='mostrador' ? (o.nombre+' (Local)') : o.nombre;
+
+       let discountRow = "";
+       if (o.discount > 0) {
+           discountRow = `<div class="row"><div class="l">DESC. (${esc(o.coupon||'')})</div><div class="r">-${m(o.discount)}</div></div>`;
+       }
+
+       const html = `<!doctype html><html><head><style>
+       @page{size:58mm auto;margin:0} body{width:58mm;margin:0 auto;padding:5px;font-family:monospace;font-size:12px;font-weight:700;color:#000;line-height:1.2}
+       .c{text-align:center} .hr{border-top:1px dashed #000;margin:6px 0} .row{display:flex;justify-content:space-between}
+       .lbl{font-size:10px;text-transform:uppercase} .sub{font-size:11px;margin-left:5px;font-weight:400} .sep{border-top:1px dotted #999;margin:3px 0}
+       .r{text-align:right}
+       </style></head><body>
+         <div class="c" style="font-size:16px;margin-bottom:4px">Rhodes Burgers</div>
+         <div class="c" style="font-size:14px">#${o.orderNumber||'--'}</div>
+         <div class="c" style="font-size:18px;margin:5px 0">[ ${stPay} ]</div>
+         <div class="hr"></div>
+         <div><span class="lbl">CLIENTE:</span> ${esc(name)}</div>
+         <div class="c" style="font-size:16px;margin:6px 0;font-weight:900">Retira: ${esc(horarioRetiro)}</div>
+         <div><span class="lbl">PAGO:</span> ${payTxt}</div>
+         ${o.notes ? `<div class="hr"></div><div><span class="lbl">NOTA:</span> ${esc(o.notes)}</div>` : ''}
+         <div class="hr"></div>
+         ${body}
+         <div class="hr"></div>
+         ${discountRow}
+         <div class="row"><div class="l">TOTAL</div><div class="r">${m(total)}</div></div>
+         <div class="c" style="margin-top:10px;font-size:10px">${dateStr} ${timeStr}</div>
+         <script>window.onload=()=>{setTimeout(()=>{window.print()},200)}<\/script>
+       </body></html>`;
+       
+       const f = document.createElement('iframe'); f.style.cssText='position:fixed;left:0;top:0;width:0;height:0;border:0';
+       document.body.append(f); const d=f.contentWindow.document; d.open();d.write(html);d.close();
+       setTimeout(()=>f.remove(), 10000);
+    };
+  });
+ </script>
+</body>
+</html>
