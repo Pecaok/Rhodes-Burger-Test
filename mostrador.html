@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mostrador • Rhodes Burgers</title>
+  <link rel="icon" href="images/logo.png" />
+
+  <style>
+    :root{
+      --primary:#645E52;
+      --text:#111;
+      --muted:#666;
+      --bg:#f6f6f6;
+      --card:#fff;
+      --ring:#eaeaea;
+      --shadow:0 10px 30px rgba(0,0,0,.10);
+      --radius:18px;
+      --danger:#d32f2f;
+      --success:#2e7d32;
+      --warn:#ff9800;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:#fff;
+      box-shadow:0 2px 12px rgba(0,0,0,.06);
+      height: 60px;
+    }
+    .topbar{
+      max-width:1400px;
+      margin:0 auto;
+      padding:0 20px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      height: 100%;
+    }
+    .brand{ display:flex; align-items:center; text-decoration:none; color:inherit; font-weight:800; font-size: 18px; }
+    .brand img{ width:32px; height:32px; border-radius:8px; margin-right:8px; }
+    .spacer{ flex:1; }
+    .btn{
+      display:inline-flex; align-items:center; gap:8px; border:1px solid var(--ring);
+      background:#fff; padding:8px 14px; border-radius:99px; cursor:pointer;
+      font-weight:700; text-decoration:none; color:inherit; font-size: 14px;
+    }
+    .btn.primary{ background:var(--primary); color:#fff; border-color:var(--primary); }
+
+    /* LAYOUT */
+    .container{
+      display:grid;
+      grid-template-columns: 1fr 500px; 
+      height: calc(100vh - 60px);
+    }
+
+    /* IZQUIERDA: MENÚ */
+    .menu-section {
+      padding: 20px 30px;
+      overflow-y: auto;
+    }
+    h1{ font-size:24px; margin:0 0 10px; }
+    h2{ font-size:18px; margin:20px 0 10px; padding-bottom:5px; border-bottom:2px solid #eee; }
+
+    .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px; }
+
+    .card{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+      overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--ring);
+    }
+    .card img{ width:100%; height:130px; object-fit:cover; }
+    .content{ padding:12px; display:flex; flex-direction:column; flex:1; }
+    .content h3 { margin:0 0 4px; font-size:16px; }
+    .row{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:10px; }
+    .price{ font-weight:800; font-size:15px; }
+    .addBtn{ padding:6px 12px; font-size:13px; }
+
+    /* DERECHA: CARRITO */
+    aside.side{
+      background: #fff;
+      border-left: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden; 
+    }
+
+    .cart-header {
+      padding: 20px;
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+      z-index: 2;
+    }
+    .cart-title { font-size: 20px; font-weight: 800; }
+    #cartTotal { font-size: 22px; font-weight: 900; color: var(--primary); }
+
+    /* ÁREA DE PRODUCTOS */
+    #cartScrollArea{
+      flex: 1; 
+      min-height: 200px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #fafafa;
+    }
+
+    /* ÁREA DE FORMULARIO */
+    .form-area {
+      padding: 20px;
+      background: #fff;
+      border-top: 2px solid #eee;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+      z-index: 5;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+
+    .form-grid { display: grid; gap: 12px; }
+    .field label{ display:block; font-weight:700; margin-bottom:4px; font-size: 12px; color: #555; text-transform:uppercase; letter-spacing:0.5px; }
+    .field input, .field select {
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ccc;
+      font-size:15px; background:#fff;
+    }
+    .field input:focus, .field select:focus { border-color:var(--primary); outline:none; background:#f9fdf9; }
+
+    /* Items del carrito */
+    .cart-item {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+      padding: 12px; margin-bottom: 10px; display: flex; gap: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-weight: 700; font-size: 15px; display: block; margin-bottom: 4px; }
+    .cart-item-desc { font-size: 13px; color: #666; line-height: 1.3; }
+    .cart-item-price { font-weight: 700; font-size: 15px; white-space: nowrap; text-align: right; }
+    .cart-actions { margin-top: 6px; display: flex; gap: 12px; justify-content: flex-end; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.6; transition: opacity .2s; padding: 2px; }
+    .btn-icon:hover { opacity: 1; }
+
+    /* Horarios */
+    .slot-row { display: flex; gap: 8px; align-items: center; }
+    .slot-display { flex: 1; text-align: center; font-weight: 800; font-size: 16px; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 10px; }
+    .arrow { width: 40px; height: 40px; display: grid; place-items: center; background: #fff; border: 1px solid #ddd; border-radius: 10px; font-size: 18px; cursor: pointer; user-select: none; }
+    
+    #btnCargarPedido {
+      width: 100%; margin-top: 15px; padding: 16px; font-size: 18px; 
+      text-transform: uppercase; letter-spacing: 1px; border-radius: 12px;
+    }
+
+    /* --- ESTILOS PAGO --- */
+    .payment-status-toggle { display: flex; gap: 10px; }
+    .toggle-btn {
+        flex: 1; padding: 12px; border: 1px solid #ddd; background: #f5f5f5;
+        border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 14px;
+        transition: all 0.2s; opacity: 0.7;
+    }
+    .toggle-btn:hover { opacity: 1; }
+    
+    .toggle-btn.paid.active { background: #e8f5e9; border-color: var(--success); color: var(--success); opacity: 1; box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2); }
+    .toggle-btn.pending.active { background: #fff3e0; border-color: var(--warn); color: #e65100; opacity: 1; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2); }
+
+
+    /* Modal */
+    .overlay{ position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:9999; }
+    .modal{ width:450px; max-width:95%; background:white; border-radius:20px; padding:25px; box-shadow:0 20px 50px rgba(0,0,0,.4); }
+    .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .chip{ display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f0f0f0; border-radius: 99px; cursor: pointer; font-size: 13px; font-weight: 600; border: 2px solid transparent; }
+    .chip:has(input:checked) { background: #e3ebd3; border-color: var(--primary); color: var(--primary); }
+    
+    .qty-ctrl { display: flex; align-items: center; gap: 10px; background: #f9f9f9; padding: 4px; border-radius: 8px; border: 1px solid #eee; }
+    .qtybtn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-weight: 700; }
+    
+    textarea{ width:100%; min-height:80px; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; resize:none; }
+
+    .missing-fries-alert { color: var(--danger); font-weight: 800; font-size: 11px; background: #fff0f0; padding: 3px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; border: 1px solid #ffcccc; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <a class="brand" href="#"><img src="images/logo.png" alt="">Rhodes Burgers</a>
+    <div class="spacer"></div>
+    <a class="btn" href="pedido_local.html">📦 Pedidos</a>
+    <a class="btn" href="finanzas.html">📈 Finanzas</a>
+    <a class="btn" href="admin.html">⚙️ Admin</a>
+    <strong style="margin-left:8px">Mostrador</strong>
+  </div>
+</header>
+
+<div class="container">
+
+  <section class="menu-section">
+    <h1>Menú</h1>
+    <h2>Hamburguesas</h2>
+    <div id="burgersGrid" class="grid"></div>
+    <h2 style="margin-top:30px">Bebidas</h2>
+    <div id="drinksGrid" class="grid"></div>
+    <h2 style="margin-top:30px">Guarniciones</h2>
+    <div id="sidesGrid" class="grid"></div>
+  </section>
+
+  <aside class="side">
+    <div class="cart-header">
+      <span class="cart-title">Tu Pedido</span>
+      <span id="cartTotal">$0</span>
+    </div>
+
+    <div id="cartScrollArea">
+      <div id="cartItems" class="muted" style="text-align:center; padding-top:40px; font-size:15px;">
+        Carrito vacío.
+      </div>
+    </div>
+
+    <div class="form-area">
+      <div class="form-grid">
+        <div class="field">
+          <label>Nombre del Cliente</label>
+          <input id="inpNombre" type="text" placeholder="Ej: Juan" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label>Teléfono (Opcional)</label>
+          <input id="inpTel" type="tel">
+        </div>
+
+        <div class="field">
+          <label>Método de pago</label>
+          <select id="selPago">
+            <option value="">(En caja / Sin especificar)</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="mercado_pago">Mercado Pago</option>
+            <option value="debito">Débito</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+
+        <div class="field">
+            <label>Estado del Pago</label>
+            <div class="payment-status-toggle">
+                <button class="toggle-btn paid" id="btnPayPaid" onclick="setPaymentStatus(true)">✅ PAGADO</button>
+                <button class="toggle-btn pending active" id="btnPayPending" onclick="setPaymentStatus(false)">⏳ PENDIENTE</button>
+            </div>
+        </div>
+
+        <div class="field">
+          <label>Horario</label>
+          <div class="slot-row">
+            <div class="arrow" id="slotPrev">◀</div>
+            <div class="slot-display" id="slotLabel">--:--</div>
+            <div class="arrow" id="slotNext">▶</div>
+          </div>
+          <div id="miniSlotSub" class="muted" style="text-align:center; margin-top:4px; font-size:11px;">Seleccionado: —</div>
+        </div>
+      </div>
+
+      <input id="manualTime" type="hidden">
+
+      <button id="btnCargarPedido" class="btn primary">CONFIRMAR PEDIDO</button>
+    </div>
+  </aside>
+
+</div>
+
+<div class="overlay" id="overlayCustomize">
+  <div class="modal">
+    <h3 id="modTitle" style="margin-top:0">Personalizar</h3>
+
+    <div class="field">
+      <label style="margin-bottom:8px">Elegí las papas</label>
+      <div class="chip-group">
+        <label class="chip"><input type="radio" name="fries" value="con_sazon"> 🍟 Sazonadas</label>
+        <label class="chip"><input type="radio" name="fries" value="con_sal"> 🧂 Con sal</label>
+        <label class="chip"><input type="radio" name="fries" value="sin_sal"> 🥔 Sin sal</label>
+      </div>
+    </div>
+
+    <div id="rowPatties" class="row" style="display:none;margin-top:20px;">
+      <div style="font-size:14px">
+          <strong>Carne extra</strong> <span id="lblPricePatty" class="muted" style="font-weight:400; font-size:12px"></span>
+      </div>
+      <div class="qty-ctrl">
+        <button id="patDec" class="qtybtn">-</button>
+        <span id="patVal" style="font-weight:bold; min-width:16px; text-align:center">0</span>
+        <button id="patInc" class="qtybtn">+</button>
+      </div>
+    </div>
+
+    <div id="rowCheddar" class="row" style="display:none;margin-top:15px;">
+      <div style="font-size:14px">
+          <strong>Cheddar extra</strong> <span id="lblPriceCheddar" class="muted" style="font-weight:400; font-size:12px"></span>
+      </div>
+      <div class="qty-ctrl">
+        <button id="cheDec" class="qtybtn">-</button>
+        <span id="cheVal" style="font-weight:bold; min-width:16px; text-align:center">0</span>
+        <button id="cheInc" class="qtybtn">+</button>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:20px">
+      <label>Notas</label>
+      <textarea id="notes" maxlength="200" placeholder="Aclaraciones..."></textarea>
+      <div id="notesCount" class="muted" style="text-align:right; font-size:11px">0/200</div>
+    </div>
+
+    <div class="row" style="margin-top:20px; border-top:1px solid #eee; padding-top:15px">
+      <span style="font-size:14px; color:#555">Total ítem:</span>
+      <span id="unitPreview" style="font-weight:900;font-size:20px;margin-left:8px;color:var(--primary)"></span>
+    </div>
+
+    <div class="row" style="margin-top:20px; gap:10px">
+      <button class="btn" id="btnCancel" style="flex:1">Cancelar</button>
+      <button class="btn primary" id="btnAdd" style="flex:1">AGREGAR</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+/* ============= CONFIG ============= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBbt5YOWDE0ouLn-Ib_iD1yUesok5SEhB8",
+  authDomain: "rhodes-burguers.firebaseapp.com",
+  projectId: "rhodes-burguers",
+  storageBucket: "rhodes-burguers.firebasestorage.app",
+  messagingSenderId: "951646688091",
+  appId: "1:951646688091:web:05db5fadb4150d1fa9c07e"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const $ = s => document.querySelector(s);
+const money = n => (Number(n)||0).toLocaleString("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+const FALLBACK_IMG = "images/logo.png";
+
+// 🔥 PRECIOS DINÁMICOS (Defaults por si no hay conexión)
+let EXTRA_PRICE_PATTY   = 2500;
+let EXTRA_PRICE_CHEDDAR = 300;
+
+// Cargar precios de la DB
+db.collection("config").doc("prices").onSnapshot(doc => {
+    if(doc.exists) {
+        const d = doc.data();
+        if(d.patty) EXTRA_PRICE_PATTY = Number(d.patty);
+        if(d.cheddar) EXTRA_PRICE_CHEDDAR = Number(d.cheddar);
+        
+        // Actualizar textos modal si está abierto o se abre luego
+        if($("#lblPricePatty")) $("#lblPricePatty").textContent = `(+$${EXTRA_PRICE_PATTY})`;
+        if($("#lblPriceCheddar")) $("#lblPriceCheddar").textContent = `(+$${EXTRA_PRICE_CHEDDAR})`;
+    }
+});
+
+/* ============= LOGICA PAGO (DEFAULT PENDIENTE) ============= */
+let isOrderPaid = false; 
+
+window.setPaymentStatus = function(isPaid){
+    isOrderPaid = isPaid;
+    const btnPaid = document.getElementById("btnPayPaid");
+    const btnPend = document.getElementById("btnPayPending");
+    
+    if(isPaid){
+        btnPaid.classList.add("active");
+        btnPend.classList.remove("active");
+    } else {
+        btnPaid.classList.remove("active");
+        btnPend.classList.add("active");
+    }
+}
+
+/* ============= MENÚ ============= */
+let PRODUCTS = { burgers: [], drinks: [], sides: [] };
+let MENU_ORDER = {};
+let availability = new Map();
+
+db.collection("config").doc("menuOrder").onSnapshot(snap=>{
+  MENU_ORDER = snap.exists ? snap.data() : {};
+  mountMenu();
+});
+
+const isAvailable = id => availability.get(id) !== false;
+
+db.collection("products").onSnapshot(snap=>{
+  availability.clear();
+  PRODUCTS = { burgers: [], drinks: [], sides: [] };
+  snap.forEach(doc=>{
+    const d = doc.data();
+    const item = {
+      id: doc.id,
+      name: d.name,
+      price: d.price,
+      img: d.img || FALLBACK_IMG,
+      description: d.description || "",
+      category: d.category,
+      kind: d.kind || "",
+      allowedExtras: d.allowedExtras || {} // 🔥 LEER CONFIG DE EXTRAS
+    };
+    if(d.available === false) availability.set(doc.id, false);
+    const cat = (d.category||"").toLowerCase();
+    if(cat.includes("burger") || cat.includes("hamburguesa")) PRODUCTS.burgers.push(item);
+    else if(cat.includes("drink") || cat.includes("bebida")) PRODUCTS.drinks.push(item);
+    else if(cat.includes("side") || cat.includes("guarnicion") || cat.includes("papas")) PRODUCTS.sides.push(item);
+  });
+  mountMenu();
+});
+
+function orderedList(category, arr){
+  const order = MENU_ORDER[category] || [];
+  const map = new Map(order.map((id,i)=>[id,i]));
+  return [...arr].sort((a,b)=>{
+    const A = map.has(a.id) ? map.get(a.id) : 9999;
+    const B = map.has(b.id) ? map.get(b.id) : 9999;
+    return A - B;
+  });
+}
+
+const elBurgersGrid = $("#burgersGrid");
+const elDrinksGrid  = $("#drinksGrid");
+const elSidesGrid   = $("#sidesGrid");
+
+function renderCard(item){
+  const ok = isAvailable(item.id);
+  const card = document.createElement("div");
+  card.className = "card";
+  if (!ok) card.style.opacity = ".45";
+
+  card.innerHTML = `
+    <img src="${item.img}" onerror="this.src='${FALLBACK_IMG}'">
+    <div class="content">
+      <h3>${item.name}</h3>
+      ${item.description ? `<div class="muted" style="margin-bottom:auto">${item.description}</div>` : "<div style='margin-bottom:auto'></div>"}
+      <div class="row">
+        <span class="price">${money(item.price)}</span>
+        <button class="btn addBtn" ${ok?"":"disabled"}>Agregar</button>
+      </div>
+    </div>
+  `;
+
+  const btn = card.querySelector(".addBtn");
+  const cat = (item.category||"").toLowerCase();
+
+  if(cat.includes("bebida") || cat.includes("drink")){
+    btn.onclick = ()=>{
+      if(!cart.drink[item.id]) cart.drink[item.id]={qty:0,item};
+      cart.drink[item.id].qty++;
+      renderCart();
+    };
+  }
+  else if(cat.includes("guarnicion") || cat.includes("side") || cat.includes("papas")){
+    btn.onclick = ()=>{
+      if(!cart.side[item.id]) cart.side[item.id]={qty:0,item};
+      cart.side[item.id].qty++;
+      renderCart();
+    };
+  }
+  else{
+    btn.onclick = ()=> openCustomize(item);
+  }
+  return card;
+}
+
+function mountMenu(){
+  elBurgersGrid.innerHTML = ""; elDrinksGrid.innerHTML = ""; elSidesGrid.innerHTML = "";
+  orderedList("hamburguesas", PRODUCTS.burgers).forEach(x=> elBurgersGrid.appendChild(renderCard(x)));
+  orderedList("bebidas", PRODUCTS.drinks).forEach(x=> elDrinksGrid.appendChild(renderCard(x)));
+  orderedList("guarniciones", PRODUCTS.sides).forEach(x=> elSidesGrid.appendChild(renderCard(x)));
+}
+
+/* ============= CARRITO ============= */
+let cart = { burger:{}, drink:{}, side:{} };
+
+function renderCart(){
+  let html="";
+  let total=0;
+  const wrap = $("#cartItems");
+  const totalEl=$("#cartTotal");
+
+  // Hamburguesas
+  for(const id in cart.burger){
+    const b = cart.burger[id];
+    // Usar precios dinámicos
+    const unit = b.item.price + b.extras.patty * EXTRA_PRICE_PATTY + b.extras.cheddar * EXTRA_PRICE_CHEDDAR;
+    total += unit * b.qty;
+
+    const extras=[];
+    if(b.fries) {
+        extras.push(`🍟 ${b.fries}`);
+    } else {
+        extras.push(`<div class="missing-fries-alert">⚠️ FALTAN ELEGIR PAPAS</div>`);
+    }
+
+    if(b.extras.patty) extras.push("+"+b.extras.patty+" carne");
+    if(b.extras.cheddar) extras.push("+"+b.extras.cheddar+" cheddar");
+    if(b.notes) extras.push("📝 "+b.notes);
+
+    html += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <span class="cart-item-name">${b.qty}× ${b.item.name}</span>
+          <div class="cart-item-desc">${extras.join(" ")}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end">
+            <span class="cart-item-price">${money(unit * b.qty)}</span>
+            <div class="cart-actions">
+              <button class="btn-icon" onclick="editBurger('${id}')" title="Editar">✏️</button>
+              <button class="btn-icon" onclick="removeFromCart('${id}', 'burger')" style="color:#b00" title="Eliminar">✕</button>
+            </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Bebidas
+  for(const id in cart.drink){
+    const d = cart.drink[id];
+    total += d.item.price * d.qty;
+    html += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <span class="cart-item-name">${d.qty}× ${d.item.name}</span>
+          <div class="cart-item-desc">Bebida</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end">
+            <span class="cart-item-price">${money(d.item.price*d.qty)}</span>
+            <div class="cart-actions">
+              <button class="btn-icon" onclick="removeFromCart('${id}', 'drink')" style="color:#b00">✕</button>
+            </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Guarniciones
+  for(const id in cart.side){
+    const s = cart.side[id];
+    total += s.item.price * s.qty;
+    html += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <span class="cart-item-name">${s.qty}× ${s.item.name}</span>
+          <div class="cart-item-desc">Extra</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end">
+            <span class="cart-item-price">${money(s.item.price*s.qty)}</span>
+            <div class="cart-actions">
+              <button class="btn-icon" onclick="removeFromCart('${id}', 'side')" style="color:#b00">✕</button>
+            </div>
+        </div>
+      </div>
+    `;
+  }
+
+  wrap.innerHTML = html || `<span class="muted" style="display:block; text-align:center; padding-top:20px">Carrito vacío.</span>`;
+  totalEl.textContent = money(total);
+}
+
+/* ============= MODAL ============= */
+let currentItem=null;
+
+function openCustomize(item){
+  currentItem=item;
+  $("#patVal").textContent="0";
+  $("#cheVal").textContent="0";
+  $("#notes").value="";
+  $("#notesCount").textContent="0/200";
+  document.querySelectorAll("input[name='fries']").forEach(x=> x.checked=false);
+
+  // 🔥 MOSTRAR U OCULTAR EXTRAS SEGÚN CONFIG DEL ADMIN
+  const allowed = item.allowedExtras || {};
+  $("#rowPatties").style.display = allowed.patty ? "flex" : "none";
+  $("#rowCheddar").style.display = allowed.cheddar ? "flex" : "none";
+  
+  // Actualizar textos de precios
+  $("#lblPricePatty").textContent = `(+$${EXTRA_PRICE_PATTY})`;
+  $("#lblPriceCheddar").textContent = `(+$${EXTRA_PRICE_CHEDDAR})`;
+  
+  $("#modTitle").textContent = "Personalizar " + item.name;
+  updatePreview();
+
+  $("#overlayCustomize").style.display="flex";
+  
+  $("#btnAdd").onclick = addItemFromModal;
+  $("#btnAdd").textContent = "AGREGAR";
+}
+
+function removeFromCart(id, type){
+  if(type === "burger") delete cart.burger[id];
+  if(type === "drink") delete cart.drink[id];
+  if(type === "side") delete cart.side[id];
+  renderCart();
+}
+
+function editBurger(id){
+  const b = cart.burger[id];
+  if(!b) return;
+  currentItem = b.item;
+
+  document.querySelectorAll("input[name='fries']").forEach(x=> x.checked = (x.value === b.friesRaw));
+  $("#patVal").textContent = b.extras.patty;
+  $("#cheVal").textContent = b.extras.cheddar;
+  $("#notes").value = b.notes || "";
+  $("#notesCount").textContent = (b.notes || "").length + "/200";
+
+  // Check config
+  const allowed = b.item.allowedExtras || {};
+  $("#rowPatties").style.display = allowed.patty ? "flex" : "none";
+  $("#rowCheddar").style.display = allowed.cheddar ? "flex" : "none";
+  
+  // Precios
+  $("#lblPricePatty").textContent = `(+$${EXTRA_PRICE_PATTY})`;
+  $("#lblPriceCheddar").textContent = `(+$${EXTRA_PRICE_CHEDDAR})`;
+  
+  $("#modTitle").textContent = "Editar " + b.item.name;
+  updatePreview();
+
+  $("#overlayCustomize").style.display = "flex";
+
+  $("#btnAdd").textContent = "GUARDAR CAMBIOS";
+  $("#btnAdd").onclick = () => {
+    let friesRaw = document.querySelector("input[name='fries']:checked")?.value;
+    let friesName = getFriesName(friesRaw);
+
+    cart.burger[id] = {
+      ...b,
+      fries: friesName,
+      friesRaw: friesRaw,
+      extras:{ patty:+$("#patVal").textContent, cheddar:+$("#cheVal").textContent },
+      notes: $("#notes").value.trim()
+    };
+
+    $("#overlayCustomize").style.display = "none";
+    renderCart();
+  };
+}
+
+const addItemFromModal = ()=>{
+  let friesRaw = document.querySelector("input[name='fries']:checked")?.value;
+  let friesName = getFriesName(friesRaw);
+
+  const entry={
+    item:currentItem,
+    qty:1,
+    fries:friesName,
+    friesRaw:friesRaw, 
+    extras:{ patty:+$("#patVal").textContent, cheddar:+$("#cheVal").textContent },
+    notes:$("#notes").value.trim()
+  };
+
+  const newId=currentItem.id+"_"+Date.now();
+  cart.burger[newId]=entry;
+
+  $("#overlayCustomize").style.display="none";
+  renderCart();
+};
+
+function getFriesName(raw){
+    if(!raw) return null; 
+    if(raw==="con_sazon") return "Sazonadas";
+    if(raw==="con_sal") return "Con sal";
+    if(raw==="sin_sal") return "Sin sal";
+    return "";
+}
+
+function updatePreview(){
+  const base=currentItem.price;
+  const patt=Number($("#patVal").textContent);
+  const che=Number($("#cheVal").textContent);
+  $("#unitPreview").textContent = money(base + patt*EXTRA_PRICE_PATTY + che*EXTRA_PRICE_CHEDDAR);
+}
+
+$("#patInc").onclick=()=>{ let v=+$("#patVal").textContent; if(v<2){ $("#patVal").textContent=v+1; updatePreview(); } }
+$("#patDec").onclick=()=>{ let v=+$("#patVal").textContent; if(v>0){ $("#patVal").textContent=v-1; updatePreview(); } }
+$("#cheInc").onclick=()=>{ let v=+$("#cheVal").textContent; if(v<3){ $("#cheVal").textContent=v+1; updatePreview(); } }
+$("#cheDec").onclick=()=>{ let v=+$("#cheVal").textContent; if(v>0){ $("#cheVal").textContent=v-1; updatePreview(); } }
+$("#notes").oninput=()=> $("#notesCount").textContent = $("#notes").value.length+"/200";
+$("#btnCancel").onclick=()=>{ $("#overlayCustomize").style.display="none"; };
+
+
+/* ============= SLOTS (TIEMPO REAL + 30 MIN REGLA) ============= */
+const SLOT_START = "19:15";
+const SLOT_END   = "23:45";
+const SLOT_INTERVAL_MIN = 15;
+const GRAMOS_POR_BLOQUE = 1500;
+
+function parseHHMM(str){
+  const [h,m] = str.split(":").map(Number);
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+}
+function formatHHMM(d){
+  return d.toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",hour12:false});
+}
+function slotKey(d){
+  const y=d.getFullYear();
+  const M=String(d.getMonth()+1).padStart(2,"0");
+  const D=String(d.getDate()).padStart(2,"0");
+  const H=String(d.getHours()).padStart(2,"0");
+  const m=String(d.getMinutes()).padStart(2,"0");
+  return `${y}${M}${D}_${H}${m}`;
+}
+
+let slotObjects=[];
+let slotSubs=[];
+let currentSlotIndex=0;
+
+function loadSlotsMostrador(){
+  slotSubs.forEach(u=>{ try{u();}catch{} }); slotSubs=[];
+  const start=parseHHMM(SLOT_START);
+  const end=parseHHMM(SLOT_END);
+  const arr=[];
+  let cur=new Date(start);
+  while(cur<=end){ arr.push(new Date(cur)); cur=new Date(cur.getTime() + SLOT_INTERVAL_MIN*60000); }
+
+  slotObjects = arr.map(d => ({ date:d, key:slotKey(d), gramsUsed:0, full:false }));
+  $("#slotLabel").textContent="Cargando...";
+  
+  updateRealTimeSlot();
+  
+  slotObjects.forEach(s=>{
+    const ref = db.collection("slots_grams").doc(s.key);
+    const unsub = ref.onSnapshot(doc=>{
+      if(!doc.exists){ ref.set({gramsUsed:0},{merge:true}); }
+      const d = doc.data()||{};
+      s.gramsUsed = Number(d.gramsUsed || 0);
+      s.full = s.gramsUsed >= GRAMOS_POR_BLOQUE;
+      
+      updateRealTimeSlot();
+    });
+    slotSubs.push(unsub);
+  });
+}
+
+// 🔥 LOGICA HORA LOCAL (UTC-3) + 30 MIN
+function updateRealTimeSlot(){
+    const now = new Date();
+    
+    const minutes = now.getMinutes();
+    const quarter = Math.floor(minutes / 15) * 15;
+    
+    const baseTime = new Date(now);
+    baseTime.setMinutes(quarter);
+    baseTime.setSeconds(0);
+    baseTime.setMilliseconds(0);
+    
+    // Sumar 30 min
+    const cutoff = new Date(baseTime.getTime() + 30 * 60000);
+
+    // Comparar
+    let futureIdx = slotObjects.findIndex(s => s.date.getTime() >= cutoff.getTime() && !s.full);
+
+    if (futureIdx === -1) {
+        if (now < slotObjects[0].date) futureIdx = 0; 
+        else futureIdx = slotObjects.length - 1; 
+    }
+    currentSlotIndex = futureIdx;
+    renderSlotMostrador();
+}
+
+setInterval(updateRealTimeSlot, 10000);
+
+function renderSlotMostrador(){
+  if(slotObjects.length===0){ $("#slotLabel").textContent="Cerrado"; return; }
+  if(currentSlotIndex<0) currentSlotIndex=0;
+  if(currentSlotIndex>=slotObjects.length) currentSlotIndex=slotObjects.length-1;
+
+  const s = slotObjects[currentSlotIndex];
+  const pretty = formatHHMM(s.date);
+  $("#slotLabel").textContent = pretty;
+  
+  if(s.full){
+    $("#slotLabel").style.background="#ffeaea";
+    $("#slotLabel").style.borderColor="#d32f2f";
+    $("#slotLabel").style.color="#d32f2f";
+  } else {
+    $("#slotLabel").style.background="#fff";
+    $("#slotLabel").style.borderColor="#eaeaea";
+    $("#slotLabel").style.color="#111";
+  }
+
+  window.selectedSlot = { key:s.key, pretty, iso:s.date.toISOString(), full:s.full };
+  $("#miniSlotSub").textContent = "Seleccionado: " + pretty;
+  $("#slotPrev").classList.toggle("disabled", currentSlotIndex===0);
+  $("#slotNext").classList.toggle("disabled", currentSlotIndex===slotObjects.length-1);
+}
+
+$("#slotPrev").onclick = ()=>{ if(currentSlotIndex>0){ currentSlotIndex--; renderSlotMostrador(); } };
+$("#slotNext").onclick = ()=>{ if(currentSlotIndex < slotObjects.length-1){ currentSlotIndex++; renderSlotMostrador(); } };
+window.addEventListener("DOMContentLoaded", loadSlotsMostrador);
+
+
+/* ============= ENVIAR ============= */
+async function sendToFirestore(){
+  const btn = $("#btnCargarPedido");
+  const nombre=$("#inpNombre").value.trim();
+  if(!nombre){ alert("⚠️ Faltó el nombre del cliente."); $("#inpNombre").focus(); return; }
+  
+  let pago=$("#selPago").value.trim();
+  if(!pago) pago = "mostrador_sin_especificar";
+
+  let slot = window.selectedSlot;
+  const manual=$("#manualTime").value;
+  if(manual){
+    const now=new Date();
+    slot={ pretty:manual, iso:new Date(now.getFullYear(),now.getMonth(),now.getDate(),manual.split(":")[0],manual.split(":")[1]).toISOString() };
+  }
+  if(!slot){ alert("Elegí un horario"); return; }
+
+  for (const id in cart.burger) {
+    const burger = cart.burger[id];
+    const name = burger.item.name.toLowerCase();
+    const isSimple = !name.includes("doble") && !name.includes("pollo");
+    
+    if (!isSimple && !burger.friesRaw) {
+      alert(`⚠️ ATENCIÓN:\n\nLa hamburguesa "${burger.item.name}" no tiene papas seleccionadas.\n\nPor favor, tocá el lápiz ✏️ para editarla.`);
+      return;
+    }
+  }
+
+  if(Object.keys(cart.burger).length===0 && Object.keys(cart.drink).length===0 && Object.keys(cart.side).length===0){
+    alert("El carrito está vacío"); return;
+  }
+
+  if(btn.disabled) return;
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Procesando...";
+
+  try {
+      const items=[];
+      let rawTotal=0;
+
+      for(const id in cart.burger){
+        const b=cart.burger[id];
+        // Calcular total con precios dinámicos
+        const unit = b.item.price + b.extras.patty*EXTRA_PRICE_PATTY + b.extras.cheddar*EXTRA_PRICE_CHEDDAR;
+        rawTotal += unit*b.qty;
+        items.push({
+          type:"burger",
+          id:b.item.id,
+          name:b.item.name,
+          qty:b.qty, quantity:b.qty,
+          price:b.item.price,
+          fries:b.fries,
+          extras:b.extras,
+          notes:b.notes||""
+        });
+      }
+
+      for(const id in cart.drink){
+        const d=cart.drink[id];
+        rawTotal += d.item.price*d.qty;
+        items.push({
+          type:"drink",
+          id:d.item.id,
+          name:d.item.name,
+          qty:d.qty, quantity:d.qty,
+          price:d.item.price
+        });
+      }
+
+      for(const id in cart.side){
+        const s=cart.side[id];
+        rawTotal += s.item.price*s.qty;
+        items.push({
+          type:"side",
+          id:s.item.id,
+          name:s.item.name,
+          qty:s.qty, quantity:s.qty,
+          price:s.item.price
+        });
+      }
+
+      const refCounters=db.collection("config").doc("counters");
+      const orderNumber=await db.runTransaction(async tx=>{
+        const snap=await tx.get(refCounters);
+        const cur=snap.exists?Number(snap.data().orderNumber||0):0;
+        const nxt=cur+1;
+        tx.set(refCounters,{orderNumber:nxt},{merge:true});
+        return nxt;
+      });
+
+      const statusFinal = 'accepted'; 
+      const payStatusFinal = isOrderPaid ? 'paid' : 'pending_payment';
+      
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      const localDate = new Date(now.getTime() - offset);
+      const createdAtLocal = localDate.toISOString().slice(0, -1);
+
+      const order = {
+        orderNumber,
+        number: orderNumber,
+        nombre,
+        telefono: $("#inpTel").value.trim(),
+        entrega: "take_away",
+        pago,
+        notes: "",
+        pickup_slot: slot.pretty,
+        pickup_time: slot.iso,
+        status: statusFinal,
+        payment_status: payStatusFinal,
+        items,
+        total: rawTotal,
+        rawTotal,
+        source: "mostrador",
+        createdAt: createdAtLocal,
+        createdAt_server: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      await db.collection("orders").doc().set(order);
+
+      alert(`✅ Pedido cargado: #${orderNumber}`);
+
+      cart = { burger:{}, drink:{}, side:{} };
+      renderCart();
+      $("#inpNombre").value="";
+      $("#selPago").value="";
+      $("#manualTime").value="";
+      setPaymentStatus(false);
+      updateRealTimeSlot();
+
+  } catch(e) {
+      console.error(e);
+      alert("Error de conexión. No se cargó el pedido.");
+  } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+  }
+}
+
+$("#btnCargarPedido").onclick = sendToFirestore;
+</script>
+</body>
+</html>
