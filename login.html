@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ingresar • Rhodes Burgers</title>
+  <link rel="icon" href="images/logo.png" />
+  <style>
+    :root{ --primary:#2ecc71; --ring:#eaeaea; --text:#111; --muted:#666; --bg:#f6f6f6; }
+    *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .wrap{min-height:100dvh;display:grid;place-items:center;padding:20px}
+    .card{width:100%;max-width:420px;background:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:22px}
+    h1{margin:8px 0 16px;font-size:22px}
+    label{display:block;margin:10px 0 6px;font-weight:600}
+    input{width:100%;padding:12px;border:1px solid var(--ring);border-radius:12px}
+    .muted{color:var(--muted);font-size:13px;margin-top:10px}
+    .btn{width:100%;margin-top:14px;padding:12px;border-radius:999px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-weight:800;cursor:pointer}
+    .err{color:#b00020;margin-top:8px;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <form class="card" id="form">
+      <img src="images/logo.png" alt="" style="width:52px;height:52px;border-radius:12px;object-fit:contain;margin-bottom:6px">
+      <h1>Acceso al local</h1>
+      <label>Usuario</label>
+      <input id="user" autocomplete="username" placeholder="Usuario" required />
+      <label>Clave</label>
+      <input id="pass" type="password" autocomplete="current-password" placeholder="Clave" required />
+      <button class="btn">Ingresar</button>
+      <div id="err" class="err" style="display:none"></div>
+      <div class="muted">La sesión permanece activa por 20 horas.</div>
+    </form>
+  </div>
+
+  <script>
+  // ======== SESIÓN COMPARTIDA ========
+  const TTL_HOURS = 20;
+  const TTL_MS    = TTL_HOURS * 60 * 60 * 1000;
+  function setSession(){
+    const now = Date.now();
+    localStorage.setItem('rb_admin_ok','true');
+    localStorage.setItem('rb_admin_t', String(now));
+    localStorage.setItem('rb_auth_v2','ok');
+    sessionStorage.setItem('rb_auth_v2','ok');
+  }
+  function sessionValid(){
+    const ok = localStorage.getItem('rb_admin_ok')==='true';
+    const ts = Number(localStorage.getItem('rb_admin_t')||0);
+    const live = (Date.now()-ts) < TTL_MS;
+    return ok && live;
+  }
+  function bumpSession(){  // renueva TTL al usar
+    if (sessionValid()) localStorage.setItem('rb_admin_t', String(Date.now()));
+  }
+  function nextUrl(){
+    const qs = new URLSearchParams(location.search);
+    return qs.get('next') || 'pedido_local.html';
+  }
+
+  // Auto-redirigir sólo si la sesión es válida
+  if (sessionValid()){
+    bumpSession();
+    location.replace(nextUrl());
+  }
+
+  // ======== CREDENCIALES EN CÓDIGO ========
+  const CREDS = { user: "admin", pass: "Arthur2025$" };  // <-- cambiá acá cuando quieras
+
+  // ======== LOGIN ========
+  const $ = s=>document.querySelector(s);
+  $('#form').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const u = $('#user').value.trim();
+    const p = $('#pass').value;
+    const err = $('#err');
+    err.style.display='none'; err.textContent='';
+    if (u===CREDS.user && p===CREDS.pass){
+      setSession();
+      location.replace(nextUrl());
+    }else{
+      err.textContent = 'Usuario o clave incorrectos.';
+      err.style.display = 'block';
+    }
+  });
+  </script>
+</body>
+</html>
