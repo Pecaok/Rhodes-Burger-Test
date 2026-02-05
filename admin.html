@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="es">
+
+<script>
+const TTL_HOURS = 20;
+const TTL_MS = TTL_HOURS * 60 * 60 * 1000;
+
+function sessionValid(){
+  const ok = localStorage.getItem('rb_admin_ok') === 'true';
+  const ts = Number(localStorage.getItem('rb_admin_t') || 0);
+  return ok && (Date.now() - ts) < TTL_MS;
+}
+function bumpSession(){
+  if (sessionValid()) localStorage.setItem('rb_admin_t', String(Date.now()));
+}
+function logout(){
+  localStorage.removeItem('rb_admin_ok');
+  localStorage.removeItem('rb_admin_t');
+  localStorage.removeItem('rb_auth_v2');
+  sessionStorage.removeItem('rb_auth_v2');
+  location.replace('login.html');
+}
+(function requireSession(){
+  if (!sessionValid()){
+    const next = encodeURIComponent(
+      (location.pathname.replace(/^\//,'') || 'pedido_local.html') +
+      (location.search || '') + (location.hash || '')
+    );
+    location.replace('login.html?next=' + next);
+  } else bumpSession();
+})();
+['click','keydown','focus','mousemove','touchstart','scroll']
+  .forEach(e => window.addEventListener(e, bumpSession, {passive:true}));
+</script>
+
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin • Rhodes Burgers</title>
+<link rel="icon" href="images/logo.png" />
+
+<style>
+/* ============================================================
+   ESTILOS GLOBALES
+=============================================================== */
+:root{
+  --primary: #625A45; 
+  --text: #111; 
+  --muted: #666; 
+  --bg: #f8f9fa; 
+  --card: #ffffff; 
+  --ring: #e0e0e0; 
+  --shadow: 0 4px 20px rgba(0,0,0,0.05);
+  --header-h: 70px;
+  --good: #2e7d32; 
+  --warn: #f57c00; 
+  --bad: #d32f2f; 
+  --radius: 16px;
+}
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* HEADER */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  height: var(--header-h);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.topbar {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+}
+.brand img {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* NAVEGACIÓN PRINCIPAL */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-link {
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.nav-link:hover { background: #f0f0f0; color: var(--text); }
+.nav-link.active { background: var(--bg); color: var(--text); box-shadow: inset 0 0 0 1px #eee; }
+
+.btn-logout {
+  background: #ffebee;
+  color: var(--bad);
+  border: 1px solid #ffcdd2;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 10px;
+  transition: 0.2s;
+}
+.btn-logout:hover { background: #ffcdd2; }
+
+/* MAIN & CARDS */
+main {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 0 20px;
+  display: grid;
+  gap: 24px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--ring);
+}
+.card.featured {
+  border: 2px solid var(--primary);
+  background: #fffcf8;
+}
+
+/* ESTILOS DE CONTROL DE TIENDA */
+.store-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.pill {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pill.ok { background: #e8f5e9; color: var(--good); border: 1px solid #c8e6c9; }
+.pill.off { background: #f5f5f5; color: #777; border: 1px solid #e0e0e0; }
+.pill.blue { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+.pill.warn { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+
+.mini-btn {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.mini-btn:hover { opacity: 0.9; }
+.mini-btn.good { background: var(--good); color: white; }
+.mini-btn.bad { background: #ffebee; color: var(--bad); border:1px solid #ffcdd2; }
+.mini-btn.primary { background: var(--primary); color: white; }
+
+/* Form Elements */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: #444; }
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ring);
+  background: #fff;
+  font-size: 14px;
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(98,90,69, 0.1);
+}
+
+/* Checkbox bonito */
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9f9f9;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    transition: all 0.2s;
+}
+.check-row:hover { background: #fff; border-color: var(--primary); color: var(--primary); }
+.check-row input { width: auto; margin: 0; cursor: pointer; accent-color: var(--primary); }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.good { background: #e8f5e9; color: var(--good); border-color: #c8e6c9; }
+.btn.warn { background: #fff3e0; color: #e65100; border-color: #ffe0b2; }
+.btn.bad { background: #ffebee; color: var(--bad); border-color: #ffcdd2; }
+
+/* Table */
+.table-container { overflow-x: auto; margin-top: 15px; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; }
+th { text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid #eee; }
+td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 14px; }
+.img-preview { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #eee; }
+
+h2 { font-size: 20px; margin: 0 0 10px 0; color: var(--text); }
+.muted { color: var(--muted); }
+.text-small { font-size: 13px; }
+
+/* 🔥 SEARCH & FILTER BAR */
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+.search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--ring);
+    background: #fff;
+    font-size: 14px;
+}
+.filter-tabs {
+    display: flex;
+    gap: 6px;
+}
+.filter-tab {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--ring);
+    color: #666;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+}
+.filter-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* Drag Grid */
+#orderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.orderCard {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: grab;
+  transition: transform 0.2s;
+}
+.orderCard:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+.orderCard.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
+
+/* Tile Inventory */
+.tile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+.tile:last-child { border-bottom: none; }
+.side-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+.side-pill.off { opacity: 0.6; background: #f5f5f5; }
+
+@media (max-width: 900px) {
+  .topbar { padding: 0 15px; }
+  .nav-right { display: none; } 
+  .search-bar { flex-direction: column; }
+  .filter-tabs { overflow-x: auto; padding-bottom: 5px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="topbar">
+    <a class="brand" href="#">
+      <img src="images/logo.png" alt="Logo">
+      <span>Rhodes Admin</span>
+    </a>
+
+    <nav class="nav-right">
+      <a class="nav-link active" href="admin.html">Admin</a>
+      <a class="nav-link" href="stock.html">Stock</a>
+      <a class="nav-link" href="finanzas.html">Finanzas</a>
+      <a class="nav-link" href="pedido_local.html">Pedidos</a>
+      <a class="nav-link" href="mostrador.html">Mostrador</a>
+      <button class="btn-logout" onclick="logout()">Salir</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="card" style="border-left: 4px solid var(--primary);">
+  <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h2>Estado de la Tienda</h2>
+      <div id="storeSub" class="text-small muted">Cargando estado...</div>
+    </div>
+    <div id="storePill" class="pill off">...</div>
+  </div>
+
+  <div class="store-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:30px;">
+    
+    <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee;">
+      <h3 style="margin-top:0; font-size:16px;">⚡ Control Diario</h3>
+      <p class="text-small muted">Abrir o cerrar manualmente ahora mismo.</p>
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn good" id="btnSimpleOpen" style="flex:1;">Abrir Tienda</button>
+        <button class="btn bad" id="btnSimpleClose" style="flex:1;">Cerrar Tienda</button>
+      </div>
+      <button class="btn" id="btnResetStore" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; width:100%; margin-top:15px;">
+        🔄 Restablecer a Automático
+      </button>
+    </div>
+
+    <div style="background:#fff5f5; padding:15px; border-radius:12px; border:1px solid #ffcdd2;">
+      <h3 style="margin-top:0; font-size:16px; color:#d32f2f;">🛠️ Configurar Cierre Especial</h3>
+      <p class="text-small muted">Seleccioná fechas y motivo de cierre.</p>
+      
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <input id="maintTitle" type="text" placeholder="Título Opcional (O dejalo vacío y usá botones abajo)" 
+               style="border:1px solid #ffcdd2; font-weight:700;">
+        
+        <input id="maintMsg" type="text" placeholder="Mensaje adicional (Ej: Volvemos el Lunes)" 
+               style="border:1px solid #ffcdd2;">
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+            <div>
+                <label style="font-size:11px;">Desde:</label>
+                <input id="maintFrom" type="datetime-local" style="font-size:12px;">
+            </div>
+            <div>
+                <label style="font-size:11px;">Hasta:</label>
+                <input id="maintTo" type="datetime-local" style="font-size:12px;">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <button class="btn" id="btnSetVacation" style="flex:1; background:#e0f7fa; color:#006064; border:1px solid #b2ebf2; font-size:13px;">
+                ✈️ Vacaciones
+            </button>
+            <button class="btn warn" id="btnSetMaint" style="flex:1; font-size:13px;">
+                🛠️ Mantenimiento
+            </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Configuración de Precios (Extras)</h2>
+        <div class="pill blue">Globales</div>
+    </div>
+    <p class="muted" style="margin-bottom:15px">Definí el valor que se suma al agregar estos extras.</p>
+    
+    <div class="form-grid" style="grid-template-columns: 1fr 1fr auto;">
+        <div>
+            <label>Precio Extra Carne ($)</label>
+            <input id="pricePatty" type="number" placeholder="Ej: 2500">
+        </div>
+        <div>
+            <label>Precio Extra Cheddar ($)</label>
+            <input id="priceCheddar" type="number" placeholder="Ej: 300">
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+            <button id="btnSaveExtras" class="btn primary" style="height:42px;">Guardar Precios</button>
+        </div>
+    </div>
+</section>
+
+<section class="card featured">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+    <h2>Gestión de Productos</h2>
+    <div class="pill off" style="font-weight:normal; background:#fff; border:1px solid #ddd">Modo Editor</div>
+  </div>
+  
+  <p class="muted" style="margin-bottom:20px">
+    Agregá, editá y gestioná el catálogo completo.
+  </p>
+
+  <div class="form-grid">
+    <div>
+      <label>ID (único)</label>
+      <input id="prdId" type="text" placeholder="Ej: bigjohn_simple">
+    </div>
+
+    <div>
+      <label>Nombre</label>
+      <input id="prdName" type="text" placeholder="Nombre del producto">
+    </div>
+
+    <div>
+      <label>Categoría</label>
+      <select id="prdCategory">
+        <option value="hamburguesas">Hamburguesas</option>
+        <option value="bebidas">Bebidas</option>
+        <option value="guarniciones">Guarniciones</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Precio</label>
+      <input id="prdPrice" type="number" min="0" step="1" placeholder="Ej: 4800">
+    </div>
+
+    <div>
+      <label>Imagen (URL o archivo)</label>
+      <input id="prdImg" type="text" placeholder="https://...">
+      <input id="prdImgFile" type="file" accept="image/*" style="margin-top:8px; font-size:12px">
+    </div>
+
+    <div>
+        <label>Extras Permitidos</label>
+        <div style="display:flex; gap:10px; margin-top:5px">
+            <label class="check-row">
+                <input type="checkbox" id="prdExPatty"> 🥩 Carne
+            </label>
+            <label class="check-row">
+                <input type="checkbox" id="prdExCheddar"> 🧀 Cheddar
+            </label>
+        </div>
+    </div>
+
+    <div style="grid-column:1/-1">
+      <label>Descripción</label>
+      <textarea id="prdDesc" rows="3" placeholder="Descripción corta…"></textarea>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="btn primary" id="btnSaveProduct">Guardar / Actualizar</button>
+    <button class="btn bad" id="btnClearProduct" style="background:transparent; color:#d32f2f; border:1px solid #ffcdd2">Limpiar</button>
+  </div>
+
+  <div style="height:1px; background:#eee; margin:25px 0"></div>
+
+  <h3>Listado Actual</h3>
+
+  <div class="search-bar">
+      <input type="text" id="prdSearch" class="search-input" placeholder="🔍 Buscar por nombre o ID...">
+      <div class="filter-tabs" id="prdFilters">
+          <div class="filter-tab active" data-f="all">Todos</div>
+          <div class="filter-tab" data-f="hamburguesas">Burgers</div>
+          <div class="filter-tab" data-f="bebidas">Bebidas</div>
+          <div class="filter-tab" data-f="guarniciones">Papas</div>
+      </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>IMG</th>
+          <th>Nombre</th>
+          <th>Cat.</th>
+          <th>Precio</th>
+          <th>Extras</th> 
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+            </thead>
+      <tbody id="prdTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:24px;">
+
+  <section class="card">
+    <h2>Orden Visual</h2>
+    <p class="muted">Arrastrá las tarjetas para ordenar en el menú.</p>
+
+    <div class="row" id="orderCatButtons" style="margin-bottom:15px; background:#f5f5f5; padding:4px; border-radius:10px; display:inline-flex;">
+      <button class="mini-btn primary" data-cat="hamburguesas">Burgers</button>
+      <button class="mini-btn" data-cat="bebidas" style="color:#555; background:transparent">Bebidas</button>
+      <button class="mini-btn" data-cat="guarniciones" style="color:#555; background:transparent">Papas</button>
+    </div>
+
+    <div id="orderGrid"></div>
+
+    <div style="margin-top:20px; text-align:right">
+      <button class="btn primary" id="btnSaveOrder">Guardar Nuevo Orden</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Control de Stock Rápido</h2>
+    <p class="muted">Activar/Desactivar disponibilidad inmediata.</p>
+    
+    <div id="invList" style="border:1px solid #eee; border-radius:12px; overflow:hidden;">
+      </div>
+  </section>
+
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:24px;">
+
+  <section class="card">
+    <h2>Configuración de Papas</h2>
+    <p class="muted">Opciones visibles al cliente.</p>
+    <div id="sidesContainer"></div>
+  </section>
+
+  <section class="card">
+    <h2>Cupones de Descuento</h2>
+    
+    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+      <div><label>Código</label><input id="cpCode" type="text" style="text-transform:uppercase"></div>
+      <div>
+        <label>Tipo</label>
+        <select id="cpType">
+          <option value="percent">% Porcentaje</option>
+          <option value="fixed">$ Monto Fijo</option>
+        </select>
+      </div>
+      <div><label>Valor</label><input id="cpValue" type="number"></div>
+      <div><label>Max Usos</label><input id="cpMaxUses" type="number"></div>
+      <div><label>Desde</label><input id="cpFrom" type="date"></div>
+      <div><label>Hasta</label><input id="cpTo" type="date"></div>
+      <div style="grid-column:1/-1"><label>Nota interna</label><input id="cpNote" type="text"></div>
+    </div>
+    <button class="btn primary" id="btnCreateCp" style="width:100%">Crear Cupón</button>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Tipo</th>
+            <th>Valor</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="cpTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyBbt5YOWDE0ouLn-Ib_iD1yUesok5SEhB8",
+  authDomain: "rhodes-burguers.firebaseapp.com",
+  projectId: "rhodes-burguers",
+  storageBucket: "rhodes-burguers.firebasestorage.app",
+  messagingSenderId: "951646688091",
+  appId: "1:951646688091:web:05db5fadb4150d1fa9c07e"
+};
+try{ firebase.initializeApp(firebaseConfig); } catch(e){}
+try{
+  firebase.firestore().settings({ experimentalForceLongPolling:true, useFetchStreams:false });
+}catch(e){}
+
+const db = firebase.firestore();
+const productsCol = db.collection('products');
+
+/* Helpers */
+const $ = s => document.querySelector(s);
+
+/* 🔥 VARIABLE GLOBAL PARA GUARDAR IMAGEN AL EDITAR */
+let editingProductImg = null;
+
+/* 1. AUTO DETECT KIND */
+function autoDetectKind(id, name = "", desc = "") {
+  id    = id.toLowerCase();
+  name = (name || "").toLowerCase();
+  desc = (desc || "").toLowerCase();
+  if (id.includes("_doble"))  return "doble";
+  if (id.includes("_simple")) return "simple";
+  if (id.includes("_pollo"))  return "pollo";
+  if (name.includes("doble")) return "doble";
+  if (name.includes("pollo")) return "pollo";
+  if (desc.includes("doble")) return "doble";
+  if (desc.includes("pollo")) return "pollo";
+  return "simple"; 
+}
+
+/* 2. File to Base64 */
+async function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+/* 3. SAVE PRODUCT (CORREGIDO) */
+async function saveProduct(){
+  const id = $('#prdId').value.trim();
+  const name = $('#prdName').value.trim();
+  const category = $('#prdCategory').value.trim();
+  const price = Number($('#prdPrice').value || 0);
+  const urlImg = $('#prdImg').value.trim();
+  const desc = $('#prdDesc').value.trim();
+  
+  const exPatty = $('#prdExPatty').checked;
+  const exCheddar = $('#prdExCheddar').checked;
+
+  const file = $('#prdImgFile').files[0];
+
+  if(!id){ alert("Ingresá un ID"); return; }
+  if(!name){ alert("Ingresá un nombre"); return; }
+  if(!(price>0)){ alert("Precio inválido"); return; }
+
+  // 🔥 LOGICA INTELIGENTE DE IMAGEN
+  let finalImg = urlImg; 
+  if(file){
+    finalImg = await fileToBase64(file);
+  } else if(!finalImg && editingProductImg){
+    finalImg = editingProductImg;
+  }
+
+  const payload = {
+    name, category, price,
+    img: finalImg,
+    description: desc || null,
+    available: true,
+    allowedExtras: {
+        patty: exPatty,
+        cheddar: exCheddar
+    },
+    kind: autoDetectKind(id, name, desc),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try{
+    await productsCol.doc(id).set(payload, {merge:true});
+    alert("Producto guardado correctamente.");
+    clearProductForm();
+  }catch(e){
+    console.error(e);
+    alert("Error al guardar.");
+  }
+}
+
+/* 4. CLEAR FORM */
+function clearProductForm(){
+  $('#prdId').value = '';
+  $('#prdName').value = '';
+  $('#prdCategory').value = 'hamburguesas';
+  $('#prdPrice').value = '';
+  $('#prdImg').value = '';
+  $('#prdImgFile').value = '';
+  $('#prdDesc').value = '';
+  $('#prdExPatty').checked = false;
+  $('#prdExCheddar').checked = false;
+  editingProductImg = null; 
+}
+
+/* 5. LOAD FORM */
+function loadProductIntoForm(data, id){
+  $('#prdId').value = id;
+  $('#prdName').value = data.name || '';
+  $('#prdCategory').value = data.category || 'hamburguesas';
+  $('#prdPrice').value = data.price || '';
+  
+  editingProductImg = data.img || null;
+  $('#prdImg').value = (data.img && !data.img.startsWith("data:")) ? data.img : '';
+  $('#prdImgFile').value = '';
+  $('#prdDesc').value = data.description || '';
+  
+  const extras = data.allowedExtras || {};
+  $('#prdExPatty').checked = !!extras.patty;
+  $('#prdExCheddar').checked = !!extras.cheddar;
+
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* 6. DELETE */
+async function deleteProduct(id){
+  if(!confirm("¿Eliminar "+id+"?")) return;
+  try{ await productsCol.doc(id).delete(); }catch(e){ alert("Error al eliminar."); }
+}
+
+/* 7. TOGGLE AVAILABILITY */
+async function toggleProductAvailability(id, current){
+  try{
+    await productsCol.doc(id).set({
+      available: !current,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){ alert("Error."); }
+}
+
+/* 8. RENDER TABLE (CON FILTROS Y BÚSQUEDA) */
+let ALL_PRODUCTS_DATA = []; // Cache local para filtrar rápido
+let FILTER_CAT = "all";
+let FILTER_TXT = "";
+
+function renderProductsTable(snapshot){
+  // Guardamos datos
+  ALL_PRODUCTS_DATA = [];
+  snapshot.forEach(doc => {
+      ALL_PRODUCTS_DATA.push({ id: doc.id, ...doc.data() });
+  });
+  applyFilters();
+}
+
+// 🔥 FUNCIÓN DE FILTRADO
+function applyFilters(){
+    const tbody = $('#prdTable');
+    tbody.innerHTML = '';
+
+    const filtered = ALL_PRODUCTS_DATA.filter(p => {
+        const matchCat = FILTER_CAT === "all" || p.category === FILTER_CAT;
+        const txt = FILTER_TXT.toLowerCase();
+        const matchTxt = !txt || p.name.toLowerCase().includes(txt) || p.id.toLowerCase().includes(txt);
+        return matchCat && matchTxt;
+    });
+
+    filtered.forEach(p=>{
+        const tr = document.createElement('tr');
+        
+        const imgTag = p.img 
+          ? `<img src="${p.img}" class="img-preview">` 
+          : `<div class="img-preview"></div>`;
+
+        const availableTag = p.available
+          ? `<span class="pill ok">Activo</span>`
+          : `<span class="pill off">Pausado</span>`;
+
+        let exIcons = "";
+        const ex = p.allowedExtras || {};
+        if(ex.patty) exIcons += "🥩 ";
+        if(ex.cheddar) exIcons += "🧀";
+        if(!exIcons) exIcons = '<span style="color:#ccc; font-size:12px">-</span>';
+
+        tr.innerHTML = `
+          <td><strong>${p.id}</strong></td>
+          <td>${imgTag}</td>
+          <td>${p.name}</td>
+          <td>${p.category}</td>
+          <td>$${p.price}</td>
+          <td>${exIcons}</td>
+          <td>${availableTag}</td>
+          <td class="row">
+            <button class="mini-btn good" data-act="edit" data-id="${p.id}">Editar</button>
+            <button class="mini-btn warn" data-act="toggle" data-id="${p.id}" data-av="${p.available}">
+              ${p.available ? "Pausar" : "Activar"}
+            </button>
+            <button class="mini-btn bad" data-act="delete" data-id="${p.id}">Borrar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Reasignar eventos
+    tbody.querySelectorAll("button").forEach(btn=>{
+        btn.onclick = async()=>{
+          const id = btn.dataset.id;
+          const act = btn.dataset.act;
+          if(act === "edit"){
+            const d = await productsCol.doc(id).get();
+            loadProductIntoForm(d.data(), id);
+          } else if(act === "toggle"){
+            toggleProductAvailability(id, btn.dataset.av === "true");
+          } else if(act === "delete"){
+            deleteProduct(id);
+          }
+        };
+    });
+}
+
+// 🔥 EVENTOS DE BÚSQUEDA
+$('#prdSearch').addEventListener('input', (e) => {
+    FILTER_TXT = e.target.value;
+    applyFilters();
+});
+
+document.querySelectorAll('#prdFilters .filter-tab').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('#prdFilters .filter-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        FILTER_CAT = btn.dataset.f;
+        applyFilters();
+    };
+});
+
+productsCol.onSnapshot(renderProductsTable);
+
+/* ============================================================
+     GESTIÓN DE PRECIOS DE EXTRAS
+=============================================================== */
+const pricesRef = db.collection("config").doc("prices");
+
+pricesRef.get().then(doc => {
+    if(doc.exists) {
+        const d = doc.data();
+        if(d.patty) $('#pricePatty').value = d.patty;
+        if(d.cheddar) $('#priceCheddar').value = d.cheddar;
+    }
+});
+
+$('#btnSaveExtras').onclick = async () => {
+    const pPatty = Number($('#pricePatty').value);
+    const pCheddar = Number($('#priceCheddar').value);
+    if(!pPatty || !pCheddar) { alert("Ingresá ambos precios"); return; }
+    try {
+        await pricesRef.set({ patty: pPatty, cheddar: pCheddar }, {merge:true});
+        alert("Precios de extras actualizados.");
+    } catch(e) {
+        console.error(e);
+        alert("Error al guardar precios.");
+    }
+};
+
+
+/* ============================================================
+     ORDEN VISUAL
+=============================================================== */
+let ORDER_PRODUCTS = [];
+let CURRENT_CAT = "hamburguesas";
+const menuOrderRef = db.collection("config").doc("menuOrder");
+const orderGrid = document.querySelector("#orderGrid");
+const orderCatButtons = document.querySelector("#orderCatButtons");
+
+if(orderCatButtons){
+  orderCatButtons.querySelectorAll("button").forEach(btn=>{
+    btn.onclick = ()=>{
+      orderCatButtons.querySelectorAll("button").forEach(b=>{
+        b.classList.remove("primary");
+        b.style.color = "#555";
+        b.style.background = "transparent";
+      });
+      btn.classList.add("primary");
+      btn.style.color = "#fff";
+      btn.style.background = "var(--primary)";
+      CURRENT_CAT = btn.dataset.cat;
+      renderOrderGrid();
+    };
+  });
+}
+
+let MENU_ORDER = {};
+menuOrderRef.onSnapshot(snap=>{
+  MENU_ORDER = snap.exists ? snap.data() : {};
+  renderOrderGrid();
+});
+
+function renderOrderGrid(){
+  if(!orderGrid) return;
+  orderGrid.innerHTML = "";
+  const list = ORDER_PRODUCTS.filter(p => p.category === CURRENT_CAT);
+  const orderedIds = MENU_ORDER[CURRENT_CAT] || [];
+
+  list.sort((a,b)=>{
+    const ia = orderedIds.indexOf(a.id);
+    const ib = orderedIds.indexOf(b.id);
+    if(ia === -1 && ib === -1) return a.name.localeCompare(b.name);
+    if(ia === -1) return 1;
+    if(ib === -1) return -1;
+    return ia - ib;
+  });
+
+  list.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "orderCard";
+    card.draggable = true;
+    card.dataset.id = p.id;
+    card.innerHTML = `
+      <div style="height:100px; background:#f9f9f9; display:flex; align-items:center; justify-content:center; overflow:hidden">
+         <img src="${p.img || ""}" style="width:100%; height:100%; object-fit:cover; display:${p.img?'block':'none'}">
+         <span style="display:${p.img?'none':'block'}; color:#ccc">Sin img</span>
+      </div>
+      <div style="padding:8px; font-weight:700; font-size:13px; text-align:center">${p.name}</div>
+    `;
+    card.addEventListener("dragstart", e=>{
+      e.dataTransfer.setData("id", p.id);
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", ()=>{
+      card.classList.remove("dragging");
+    });
+    card.addEventListener("dragover", e=>{
+      e.preventDefault();
+      const dragging = orderGrid.querySelector(".dragging");
+      if(!dragging || dragging === card) return;
+      const siblings = [...orderGrid.querySelectorAll(".orderCard:not(.dragging)")];
+      let nextSibling = siblings.find(sibling => {
+         return e.clientY <= sibling.getBoundingClientRect().top + sibling.getBoundingClientRect().height / 2 &&
+                e.clientX <= sibling.getBoundingClientRect().left + sibling.getBoundingClientRect().width / 2; 
+      });
+      orderGrid.insertBefore(dragging, nextSibling);
+    });
+    orderGrid.appendChild(card);
+  });
+}
+
+productsCol.onSnapshot(snap=>{
+  ORDER_PRODUCTS = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  renderOrderGrid();
+});
+
+const btnSaveOrder = document.querySelector("#btnSaveOrder");
+if(btnSaveOrder){
+  btnSaveOrder.onclick = async ()=>{
+    const ids = [...orderGrid.querySelectorAll(".orderCard")].map(c => c.dataset.id);
+    await menuOrderRef.set({ ...MENU_ORDER, [CURRENT_CAT]: ids }, {merge:true});
+    alert("Orden guardada.");
+  };
+}
+
+/* ============================================================
+     INVENTARIO
+=============================================================== */
+const invList = document.querySelector('#invList');
+function renderInventory(snapshot){
+  if(!invList) return;
+  invList.innerHTML = '';
+  snapshot.forEach(doc=>{
+    const p = doc.data();
+    const available = !!p.available;
+    const el = document.createElement('div');
+    el.className = "tile";
+    
+    const btnText = available ? 'Quitar' : 'Agregar';
+    const btnClass = available ? 'bad' : 'good';
+
+    el.innerHTML = `
+      <div>
+        <div style="font-weight:700; font-size:14px">${p.name}</div>
+        <div class="muted" style="font-size:12px">${p.category}</div>
+      </div>
+      <div class="row">
+        <span class="pill ${available?'ok':'off'}">${available ? 'OK' : 'X'}</span>
+        <button class="mini-btn ${btnClass}" data-id="${doc.id}" data-next="${available?0:1}">
+          ${btnText}
+        </button>
+      </div>
+    `;
+    invList.appendChild(el);
+  });
+  invList.querySelectorAll("button[data-id]").forEach(btn=>{
+    btn.onclick = async()=>{
+      const id = btn.dataset.id;
+      const next = btn.dataset.next === "1";
+      try{
+        await productsCol.doc(id).set({available: next, updatedAt: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      }catch(e){}
+    };
+  });
+}
+productsCol.onSnapshot(renderInventory);
+
+/* ============================================================
+     SIDES (PAPAS)
+=============================================================== */
+const sidesRef = () => db.collection("config").doc("sides");
+const SIDES_META = [
+  { key:"con_sazon", label:"Con sazón" },
+  { key:"con_sal",   label:"Con sal" },
+  { key:"sin_sal",   label:"Sin sal" }
+];
+const sidesContainer = document.querySelector("#sidesContainer");
+function renderSidesUI(state){
+  if(!sidesContainer) return;
+  sidesContainer.innerHTML = '';
+  SIDES_META.forEach(s=>{
+    const enabled = state ? !!state[s.key] : true;
+    const el = document.createElement("div");
+    el.className = "side-pill " + (enabled ? "on" : "off");
+    el.innerHTML = `
+      <div>
+        <div style="font-weight:700">${s.label}</div>
+      </div>
+      <div>
+        <button class="mini-btn ${enabled?'bad':'good'}" data-side="${s.key}" data-next="${enabled?0:1}">
+          ${enabled ? "Desactivar" : "Activar"}
+        </button>
+      </div>
+    `;
+    sidesContainer.appendChild(el);
+  });
+  sidesContainer.querySelectorAll("button[data-side]").forEach(btn=>{
+    btn.onclick = async()=>{
+      const key = btn.dataset.side;
+      const next = btn.dataset.next === "1";
+      try{ await sidesRef().set({ [key]: next, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },{merge:true}); }catch(e){}
+    };
+  });
+}
+sidesRef().onSnapshot(snap=>{ renderSidesUI(snap.exists ? snap.data() : {}); });
+
+/* ============================================================
+     STORE OVERRIDE LOGIC (CON RESET & DOBLE BOTON)
+=============================================================== */
+const storeRef = () => db.collection("config").doc("store");
+const storePill = document.querySelector("#storePill");
+const storeSub = document.querySelector("#storeSub");
+
+// Elementos Control Diario
+const btnSimpleOpen = document.querySelector("#btnSimpleOpen");
+const btnSimpleClose = document.querySelector("#btnSimpleClose");
+const btnResetStore = document.querySelector("#btnResetStore");
+
+// Elementos Mantenimiento
+const maintTitle = document.querySelector("#maintTitle"); 
+const maintMsg = document.querySelector("#maintMsg");
+const maintFrom = document.querySelector("#maintFrom");
+const maintTo = document.querySelector("#maintTo");
+// Nuevos Botones separados
+const btnSetVacation = document.querySelector("#btnSetVacation");
+const btnSetMaint = document.querySelector("#btnSetMaint");
+
+// 1. ABRIR TIENDA (Manual)
+btnSimpleOpen.onclick = async () => {
+    if(!confirm("¿Abrir la tienda manualmente?")) return;
+    try {
+        await storeRef().set({
+            forceOpen: true,
+            maintenance: firebase.firestore.FieldValue.delete(), 
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge: true});
+    } catch(e) { alert("Error al abrir"); }
+};
+
+// 2. CERRAR TIENDA (Manual)
+btnSimpleClose.onclick = async () => {
+    try {
+        await storeRef().set({
+            forceOpen: false,
+            maintenance: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge: true});
+    } catch(e) { alert("Error al cerrar"); }
+};
+
+// 3. RESET TOTAL (Volver a automático)
+btnResetStore.onclick = async () => {
+    if(!confirm("¿Borrar configuraciones manuales y usar SOLO horario automático?")) return;
+    try {
+        await storeRef().set({
+            forceOpen: firebase.firestore.FieldValue.delete(),
+            forceOpenMessage: firebase.firestore.FieldValue.delete(),
+            forceOpenUntil: firebase.firestore.FieldValue.delete(),
+            maintenance: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge: true});
+        alert("Configuración reseteada. La tienda ahora obedece al horario automático.");
+    } catch(e) { 
+        console.error(e);
+        alert("Error al resetear."); 
+    }
+};
+
+// 4. FUNCIÓN COMÚN PARA GUARDAR VACACIONES O MANTENIMIENTO
+async function scheduleClosure(type) {
+    let title = maintTitle.value.trim();
+    const msg = maintMsg.value.trim();
+    const fromVal = maintFrom.value;
+    const toVal = maintTo.value;
+
+    if(!fromVal || !toVal) { alert("Seleccioná fecha DESDE y HASTA."); return; }
+
+    const dateFrom = new Date(fromVal);
+    const dateTo = new Date(toVal);
+
+    if(dateTo <= dateFrom) { alert("La fecha 'Hasta' debe ser después de 'Desde'."); return; }
+
+    // Definir título e ícono por defecto si no escribió nada
+    let icon = "🛠️";
+    if(type === "vacation") {
+        if(!title) title = "CERRADO POR VACACIONES";
+        icon = "✈️";
+    } else {
+        if(!title) title = "EN MANTENIMIENTO";
+        icon = "🛠️";
+    }
+
+    try {
+        await storeRef().set({
+            forceOpen: false, 
+            maintenance: {
+                active: true,
+                title: title, 
+                message: msg,
+                icon: icon, // Guardamos el ícono en la base de datos
+                start: firebase.firestore.Timestamp.fromDate(dateFrom),
+                end: firebase.firestore.Timestamp.fromDate(dateTo)
+            },
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge: true});
+        alert(`Programado: ${title}`);
+    } catch(e) { 
+        console.error(e);
+        alert("Error al guardar."); 
+    }
+}
+
+// ASIGNAR EVENTOS A LOS DOS BOTONES
+btnSetVacation.onclick = () => scheduleClosure("vacation");
+btnSetMaint.onclick = () => scheduleClosure("maintenance");
+
+
+// 5. ACTUALIZAR UI AL RECIBIR DATOS
+function applyStoreDocToUI(d) {
+    const now = new Date();
+    let isOpen = false;
+    let statusText = "Estado desconocido";
+    let pillClass = "off";
+
+    let maintActive = false;
+    if(d.maintenance && d.maintenance.active) {
+        const start = d.maintenance.start.toDate();
+        const end = d.maintenance.end.toDate();
+        
+        maintTitle.value = d.maintenance.title || "";
+        maintMsg.value = d.maintenance.message || "";
+        maintFrom.value = new Date(start.getTime() - start.getTimezoneOffset()*60000).toISOString().slice(0,16);
+        maintTo.value = new Date(end.getTime() - end.getTimezoneOffset()*60000).toISOString().slice(0,16);
+
+        if(now >= start && now <= end) {
+            maintActive = true;
+            statusText = `⚠️ ${d.maintenance.icon || ""} ${d.maintenance.title}`;
+            isOpen = false;
+        } else if (now < start) {
+             statusText = `🕒 Programado: ${d.maintenance.title}`;
+             isOpen = d.forceOpen === true; 
+        } else {
+             isOpen = d.forceOpen === true;
+             statusText = "Operación normal";
+        }
+    } else {
+        maintTitle.value = "";
+        maintMsg.value = "";
+        maintFrom.value = "";
+        maintTo.value = "";
+        
+        if (d.forceOpen === true) {
+            isOpen = true;
+            statusText = "Abierto Manualmente";
+        } else if (d.forceOpen === false) {
+            isOpen = false;
+            statusText = "Cerrado Manualmente";
+        } else {
+            statusText = "Modo Automático (Horarios)";
+            isOpen = false; 
+            pillClass = "blue";
+        }
+    }
+
+    if(maintActive) {
+        storePill.textContent = "MANTENIMIENTO";
+        storePill.className = "pill warn";
+    } else if (d.forceOpen === true) {
+        storePill.textContent = "ABIERTO (MANUAL)";
+        storePill.className = "pill ok";
+    } else if (d.forceOpen === false) {
+        storePill.textContent = "CERRADO (MANUAL)";
+        storePill.className = "pill off";
+    } else {
+        storePill.textContent = "AUTOMÁTICO";
+        storePill.className = "pill blue";
+    }
+
+    storeSub.textContent = statusText;
+}
+
+storeRef().onSnapshot(snap => { applyStoreDocToUI(snap.exists ? snap.data() : {}); });
+
+/* ============================================================
+     CUPONES LOGIC
+=============================================================== */
+const cpTbody = document.querySelector("#cpTable");
+const btnCreateCp = document.querySelector("#btnCreateCp");
+
+function fmtDate(ts){ 
+  if(!ts) return null;
+  if(ts.toDate) return ts.toDate();
+  return new Date(ts.seconds*1000);
+}
+
+if(btnCreateCp){
+  btnCreateCp.onclick = () => {
+    const code = (document.querySelector("#cpCode").value||"").trim().toUpperCase();
+    if(!code){ alert("Ingresá código"); return; }
+    const type = document.querySelector("#cpType").value;
+    const value = Number(document.querySelector("#cpValue").value||0);
+    if(!(value>0)){ alert("Valor inválido"); return; }
+    const maxUses = Number(document.querySelector("#cpMaxUses").value||0);
+    const note = (document.querySelector("#cpNote").value||"").trim();
+    const fromVal = document.querySelector("#cpFrom").value;
+    const toVal = document.querySelector("#cpTo").value;
+    
+    const payload = {
+      code, type, value, enabled:true,
+      note: note || null,
+      validFrom: fromVal ? firebase.firestore.Timestamp.fromDate(new Date(fromVal)) : null,
+      validTo:   toVal   ? firebase.firestore.Timestamp.fromDate(new Date(toVal))   : null,
+      maxUses: maxUses > 0 ? maxUses : null,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection("coupons").doc(code).set({
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      uses:0, ...payload
+    },{merge:true}).then(()=>{ alert("Cupón guardado"); loadCoupons(); });
+  };
+}
+
+function renderCoupons(list){
+  if(!cpTbody) return;
+  cpTbody.innerHTML = "";
+  list.forEach(doc=>{
+    const c = doc.data();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${c.code}</strong></td>
+      <td>${c.type==='percent'?'%':'$'}</td>
+      <td>${c.value}</td>
+      <td>${c.enabled ? "<span class='pill ok'>ON</span>" : "<span class='pill off'>OFF</span>"}</td>
+      <td class="row">
+        <button class="mini-btn ${c.enabled?'warn':'good'}" data-act="toggle" data-id="${doc.id}">
+          ${c.enabled ? "Pausar" : "Activar"}
+        </button>
+        <button class="mini-btn bad" data-act="delete" data-id="${doc.id}">X</button>
+      </td>
+    `;
+    cpTbody.appendChild(tr);
+  });
+  
+  cpTbody.querySelectorAll("button").forEach(btn=>{
+    btn.onclick = async()=>{
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      if(act === "toggle"){
+        const snap = await db.collection("coupons").doc(id).get();
+        await db.collection("coupons").doc(id).set({ enabled:!snap.data()?.enabled },{merge:true});
+        loadCoupons();
+      } else if(act === "delete" && confirm("¿Eliminar?")){
+        await db.collection("coupons").doc(id).delete();
+        loadCoupons();
+      }
+    };
+  });
+}
+async function loadCoupons(){
+  const q = await db.collection("coupons").orderBy("code").get();
+  renderCoupons(q.docs);
+}
+loadCoupons();
+
+/* ============================================================
+     SAVE BTNS
+=============================================================== */
+const btnSaveProduct = document.querySelector("#btnSaveProduct");
+if(btnSaveProduct) btnSaveProduct.onclick = saveProduct;
+const btnClearProduct = document.querySelector("#btnClearProduct");
+if(btnClearProduct) btnClearProduct.onclick = clearProductForm;
+
+</script>
+</body>
+</html>
